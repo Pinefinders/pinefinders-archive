@@ -583,7 +583,7 @@ function buildPassage(ox,oz,an,s0){
 }
 function linkPortals(ox1,oz1,an1,s1, ox2,oz2,an2,s2){
   const mk=(ox,oz,an,sr)=>{const[nx,nz]=dirOf(an);
-    return{ox,oz,nx,nz,px:Math.cos(an),pz:-Math.sin(an),s:sr+0.12};};
+    return{ox,oz,nx,nz,px:Math.cos(an),pz:-Math.sin(an),s:sr-0.2};};
   const A=mk(ox1,oz1,an1,s1), B=mk(ox2,oz2,an2,s2);
   // frames are opposed (an2 = an1 + PI), so heading is preserved: pure translation
   portals.push({...A, exx:B.ox+B.nx*(B.s-0.85), exz:B.oz+B.nz*(B.s-0.85)});
