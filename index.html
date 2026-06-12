@@ -392,7 +392,7 @@ function buildRoomG(gi, F){
     const cm = W2L(0,-COR_L/2);
     cc.position.set(cm[0], COR_H+0.09, cm[1]); cc.rotation.y = an; g.add(cc);
     const lamp = new THREE.PointLight(0xffe9c8, 10, 6, 2);
-    lamp.position.set(cm[0], COR_H-0.25, cm[1]); g.add(lamp);
+    lamp.position.set(cm[0], COR_H-0.25, cm[1]); (F.dimCorridor? lights : g).add(lamp);
   }
 
   /* --- shell walls --- */
@@ -586,7 +586,7 @@ const HUB_H = 5.6;
 const portals = [];   // {ox,oz,nx,nz,px,pz,s, exx,exz}
 const hubZones = [];  // {label,cx,cz,apo}
 
-function buildPassage(ox,oz,an,s0){
+function buildPassage(ox,oz,an,s0,withLamp=true){
   const [nx,nz]=dirOf(an); const px=Math.cos(an), pz=-Math.sin(an);
   const P=(lx,sr)=>[ox+nx*sr+px*lx, oz+nz*sr+pz*lx];
   const g=new THREE.Group(); scene.add(g);
@@ -597,8 +597,11 @@ function buildPassage(ox,oz,an,s0){
   const cc=new THREE.Mesh(new THREE.BoxGeometry(DOOR_W+0.5,0.18,COR_L+0.9),M.ceil);
   const cm=P(0,s0+(COR_L+0.45)/2);
   cc.position.set(cm[0],COR_H+0.09,cm[1]); cc.rotation.y=an; g.add(cc);
-  const lamp=new THREE.PointLight(0xffe9c8,10,6,2);
-  lamp.position.set(cm[0],COR_H-0.25,cm[1]); g.add(lamp);
+  let lamp=null;
+  if(withLamp){
+    lamp=new THREE.PointLight(0xffe9c8,10,6,2);
+    lamp.position.set(cm[0],COR_H-0.25,cm[1]); g.add(lamp);
+  }
   // dark doorway at the far end, framed in gold like a curtained opening
   const ca=P(-DOOR_W/2,s0+COR_L+0.45), cb=P(DOOR_W/2,s0+COR_L+0.45);
   wallBox(g, ca[0],ca[1], cb[0],cb[1], COR_H, 0, 0.2, M.dark);
@@ -606,6 +609,7 @@ function buildPassage(ox,oz,an,s0){
     const fa=P(lx-0.06,s0+COR_L+0.34), fb=P(lx+0.06,s0+COR_L+0.34);
     wallBox(g, fa[0],fa[1], fb[0],fb[1], COR_H-0.25, 0, 0.1, M.gold, false);
   }
+  return lamp;
 }
 function linkPortals(ox1,oz1,an1,s1, ox2,oz2,an2,s2){
   const mk=(ox,oz,an,sr)=>{const[nx,nz]=dirOf(an);
@@ -642,6 +646,7 @@ function buildHub(cat, i){
   const vAng = j => back + (j-0.5)*2*Math.PI/Nh;
   const vert = j => [cx+Rh*Math.sin(vAng(j)), cz+Rh*Math.cos(vAng(j))];
   const g=new THREE.Group(); scene.add(g);
+  const hl=new THREE.Group(); hl.visible=false; scene.add(hl);   // island lights, toggled by locate()
   // island floor
   const fl=new THREE.Mesh(new THREE.CircleGeometry(62,64),M.floor);
   fl.rotation.x=-Math.PI/2; fl.position.set(cx,0.001,cz); fl.receiveShadow=true; g.add(fl);
@@ -681,19 +686,20 @@ function buildHub(cat, i){
     oc.rotation.x=Math.PI/2; oc.position.set(cx,HUB_H-0.06,cz); g.add(oc);
     const ring=new THREE.Mesh(new THREE.TorusGeometry(1.6,0.07,10,48),M.gold);
     ring.rotation.x=Math.PI/2; ring.position.set(cx,HUB_H-0.10,cz); g.add(ring);
-    const lamp=new THREE.PointLight(0xffe9c8, 55, 0, 2);
-    lamp.position.set(cx, HUB_H-0.5, cz); g.add(lamp);
+    const lamp=new THREE.PointLight(0xffe9c8, 55, 26, 2);
+    lamp.position.set(cx, HUB_H-0.5, cz); hl.add(lamp);
   }
   // numbered rooms around the hall (splay capped so few-door halls don't go absurdly wide)
   const splayH = Math.min(Math.tan(Math.PI/Nh), 0.42);
   for(let j=1;j<=K;j++){   // j over ROOMS, not walls (small halls have extra blank walls)
-    buildRoomG(cat.rooms[j-1], {ox:cx,oz:cz,an:eAng(j),near:apoH+COR_L,splay:splayH,maxL:40,exitLabel:(cat.label+' HALL').toUpperCase()});
+    buildRoomG(cat.rooms[j-1], {ox:cx,oz:cz,an:eAng(j),near:apoH+COR_L,splay:splayH,maxL:40,exitLabel:(cat.label+' HALL').toUpperCase(),dimCorridor:true});
   }
   // passages + the quiet step between rotunda and island
-  buildPassage(0,0,an,APO);
-  buildPassage(cx,cz,back,apoH);
+  buildPassage(0,0,an,APO,false);                 // foyer side: unlit, moody doorway
+  const pl=buildPassage(cx,cz,back,apoH);          // island side: lamp joins the island group
+  if(pl) hl.add(pl);
   linkPortals(0,0,an,APO+COR_L, cx,cz,back,apoH+COR_L);
-  hubZones.push({label:cat.label+' Hall', cx,cz, apo:apoH});
+  hubZones.push({label:cat.label+' Hall', cx,cz, apo:apoH, lights:hl});
 }
 
 CATEGORIES.forEach((cat,i)=>{
@@ -830,6 +836,8 @@ function locate(){
     curZone=zone;
     roomNameEl.textContent=name;
     roomZones.forEach((z,i)=>{ z.lights.visible=(i===zone); });
+    hubZones.forEach((hb,h)=>{ hb.lights.visible = (zone===1000+h) ||
+      (zone>=0 && zone<1000 && roomZones[zone].F.ox===hb.cx && roomZones[zone].F.oz===hb.cz); });
     if(zone>=0&&zone<1000) loadRoom(roomZones[zone]);
   }
 }
