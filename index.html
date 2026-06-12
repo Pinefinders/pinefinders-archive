@@ -59,6 +59,14 @@
   /* ---------- passage blink ---------- */
   #fade{position:fixed;inset:0;background:#000;opacity:0;pointer-events:none;z-index:30;transition:opacity .18s ease}
 
+  /* ---------- map ---------- */
+  #mapBtn{position:fixed;left:142px;bottom:22px;z-index:45;background:rgba(20,16,12,.82);
+    border:1px solid rgba(200,163,106,.5);color:var(--cream);font-size:11px;letter-spacing:.22em;
+    padding:10px 16px;cursor:pointer;border-radius:2px;font-family:Verdana,sans-serif}
+  #mapBtn:hover{border-color:var(--gold)}
+  #mapOv{position:fixed;inset:0;z-index:46;display:none;align-items:center;justify-content:center;
+    background:rgba(10,8,6,.8);backdrop-filter:blur(2px)}
+
   /* ---------- inspect view ---------- */
   #inspect{position:fixed;inset:0;z-index:50;background:rgba(10,8,6,.93);display:none;
     align-items:center;justify-content:center;backdrop-filter:blur(3px)}
@@ -90,15 +98,17 @@
   <div class="sub">A History of Fine Antique Pine</div>
   <div class="rule"></div>
   <div class="cta">CLICK TO EXPLORE</div>
-  <div class="keys">W A S D &nbsp;MOVE &nbsp;&middot;&nbsp; MOUSE &nbsp;LOOK &nbsp;&middot;&nbsp; CLICK &nbsp;INSPECT &nbsp;&middot;&nbsp; ESC &nbsp;RELEASE</div>
+  <div class="keys">W A S D &nbsp;MOVE &nbsp;&middot;&nbsp; MOUSE &nbsp;LOOK &nbsp;&middot;&nbsp; CLICK &nbsp;INSPECT &nbsp;&middot;&nbsp; M &nbsp;MAP &nbsp;&middot;&nbsp; ESC &nbsp;RELEASE</div>
   <div class="loadnote" id="loadnote">PREPARING THE GALLERY&hellip;</div>
 </div>
 
 <div id="roomTag"><div class="r1">THE PINEFINDERS ARCHIVE</div><div class="r2" id="roomName">Entrance Foyer</div></div>
 <div id="hint">CLICK TO RESUME EXPLORING</div>
-<div id="keysbar">W A S D &nbsp;MOVE &nbsp;&middot;&nbsp; MOUSE &nbsp;LOOK &nbsp;&middot;&nbsp; CLICK &nbsp;INSPECT &nbsp;&middot;&nbsp; ESC &nbsp;RELEASE</div>
+<div id="keysbar">W A S D &nbsp;MOVE &nbsp;&middot;&nbsp; MOUSE &nbsp;LOOK &nbsp;&middot;&nbsp; CLICK &nbsp;INSPECT &nbsp;&middot;&nbsp; M &nbsp;MAP &nbsp;&middot;&nbsp; ESC &nbsp;RELEASE</div>
 <div id="cross"></div>
 <div id="fade"></div>
+<button id="mapBtn">MAP</button>
+<div id="mapOv"><canvas id="mapCv" width="430" height="430"></canvas></div>
 
 <div id="selWrap">
   <button id="selBtn">ROOMS &#9652;</button>
@@ -382,7 +392,7 @@ function buildRoomG(gi, F){
     const cm = W2L(0,-COR_L/2);
     cc.position.set(cm[0], COR_H+0.09, cm[1]); cc.rotation.y = an; g.add(cc);
     const lamp = new THREE.PointLight(0xffe9c8, 10, 6, 2);
-    lamp.position.set(cm[0], COR_H-0.25, cm[1]); g.add(lamp);
+    lamp.position.set(cm[0], COR_H-0.25, cm[1]); (F.dimCorridor? lights : g).add(lamp);
   }
 
   /* --- shell walls --- */
@@ -440,6 +450,22 @@ function buildRoomG(gi, F){
     }, 6.0, 0.62, 2048, 210);
     const p=W2L(0,L-0.14);
     t.position.set(p[0], 3.78, p[1]); t.rotation.y = an+Math.PI; g.add(t);
+  }
+
+  /* --- exit sign over the door, facing into the room: always know the way back --- */
+  {
+    const lbl='\u2190  '+(F.exitLabel||'ENTRANCE FOYER');
+    const t=textPlane((ctx,w,h)=>{
+      ctx.clearRect(0,0,w,h);
+      ctx.fillStyle='rgba(23,18,13,0.92)'; ctx.fillRect(0,0,w,h);
+      ctx.strokeStyle='rgba(200,163,106,0.8)'; ctx.lineWidth=4; ctx.strokeRect(10,10,w-20,h-20);
+      ctx.fillStyle='#f0e8d6'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      let fs=56; ctx.font=fs+'px Georgia';
+      while(ctx.measureText(lbl).width>w-80&&fs>26){fs-=2;ctx.font=fs+'px Georgia';}
+      ctx.fillText(lbl,w/2,h/2+2);
+    },2.4,0.45,1024,190);
+    const p2=W2L(0,0.16);
+    t.position.set(p2[0],DOOR_H+0.5,p2[1]); t.rotation.y=an; g.add(t);
   }
 
   /* ---------- hanging walls: build list of wall runs, then place items ---------- */
@@ -560,7 +586,7 @@ const HUB_H = 5.6;
 const portals = [];   // {ox,oz,nx,nz,px,pz,s, exx,exz}
 const hubZones = [];  // {label,cx,cz,apo}
 
-function buildPassage(ox,oz,an,s0){
+function buildPassage(ox,oz,an,s0,withLamp=true){
   const [nx,nz]=dirOf(an); const px=Math.cos(an), pz=-Math.sin(an);
   const P=(lx,sr)=>[ox+nx*sr+px*lx, oz+nz*sr+pz*lx];
   const g=new THREE.Group(); scene.add(g);
@@ -571,8 +597,11 @@ function buildPassage(ox,oz,an,s0){
   const cc=new THREE.Mesh(new THREE.BoxGeometry(DOOR_W+0.5,0.18,COR_L+0.9),M.ceil);
   const cm=P(0,s0+(COR_L+0.45)/2);
   cc.position.set(cm[0],COR_H+0.09,cm[1]); cc.rotation.y=an; g.add(cc);
-  const lamp=new THREE.PointLight(0xffe9c8,10,6,2);
-  lamp.position.set(cm[0],COR_H-0.25,cm[1]); g.add(lamp);
+  let lamp=null;
+  if(withLamp){
+    lamp=new THREE.PointLight(0xffe9c8,10,6,2);
+    lamp.position.set(cm[0],COR_H-0.25,cm[1]); g.add(lamp);
+  }
   // dark doorway at the far end, framed in gold like a curtained opening
   const ca=P(-DOOR_W/2,s0+COR_L+0.45), cb=P(DOOR_W/2,s0+COR_L+0.45);
   wallBox(g, ca[0],ca[1], cb[0],cb[1], COR_H, 0, 0.2, M.dark);
@@ -580,6 +609,7 @@ function buildPassage(ox,oz,an,s0){
     const fa=P(lx-0.06,s0+COR_L+0.34), fb=P(lx+0.06,s0+COR_L+0.34);
     wallBox(g, fa[0],fa[1], fb[0],fb[1], COR_H-0.25, 0, 0.1, M.gold, false);
   }
+  return lamp;
 }
 function linkPortals(ox1,oz1,an1,s1, ox2,oz2,an2,s2){
   const mk=(ox,oz,an,sr)=>{const[nx,nz]=dirOf(an);
@@ -607,8 +637,8 @@ function fadeBlink(){ fadeEl.style.opacity=1; setTimeout(()=>fadeEl.style.opacit
 
 function buildHub(cat, i){
   const an = edgeAngle(i), [nx,nz]=dirOf(an);
-  const K = cat.rooms.length, Nh = K+1;
-  const Rh = K>=7?6.4 : K>=5?5.4 : 5.0;
+  const K = cat.rooms.length, Nh = Math.max(K+1, 4);
+  const Rh = Math.max(5.0, 1.7/Math.sin(Math.PI/Nh));  // hall grows with its door count
   const apoH = Rh*Math.cos(Math.PI/Nh);
   const cx = nx*ISLAND_R, cz = nz*ISLAND_R;
   const back = an+Math.PI;                  // entrance edge faces home
@@ -616,12 +646,14 @@ function buildHub(cat, i){
   const vAng = j => back + (j-0.5)*2*Math.PI/Nh;
   const vert = j => [cx+Rh*Math.sin(vAng(j)), cz+Rh*Math.cos(vAng(j))];
   const g=new THREE.Group(); scene.add(g);
+  const hl=new THREE.Group(); hl.visible=false; scene.add(hl);   // island lights, toggled by locate()
   // island floor
   const fl=new THREE.Mesh(new THREE.CircleGeometry(62,64),M.floor);
   fl.rotation.x=-Math.PI/2; fl.position.set(cx,0.001,cz); fl.receiveShadow=true; g.add(fl);
   // walls, doors, lintel signs
   for(let j=0;j<Nh;j++){
     const [ax,az]=vert(j), [bx,bz]=vert(j+1);
+    if(j>K){ wallBox(g, ax,az,bx,bz, HUB_H, 0, 0.3); continue; }   // blank side
     const ex=bx-ax, ez=bz-az, len=Math.hypot(ex,ez), ux=ex/len, uz=ez/len;
     const mid=len/2, gw=DOOR_W/2;
     wallBox(g, ax,az, ax+ux*(mid-gw),az+uz*(mid-gw), DOOR_H, 0, 0.3);
@@ -654,24 +686,25 @@ function buildHub(cat, i){
     oc.rotation.x=Math.PI/2; oc.position.set(cx,HUB_H-0.06,cz); g.add(oc);
     const ring=new THREE.Mesh(new THREE.TorusGeometry(1.6,0.07,10,48),M.gold);
     ring.rotation.x=Math.PI/2; ring.position.set(cx,HUB_H-0.10,cz); g.add(ring);
-    const lamp=new THREE.PointLight(0xffe9c8, 55, 0, 2);
-    lamp.position.set(cx, HUB_H-0.5, cz); g.add(lamp);
+    const lamp=new THREE.PointLight(0xffe9c8, 55, 26, 2);
+    lamp.position.set(cx, HUB_H-0.5, cz); hl.add(lamp);
   }
   // numbered rooms around the hall (splay capped so few-door halls don't go absurdly wide)
   const splayH = Math.min(Math.tan(Math.PI/Nh), 0.42);
-  for(let j=1;j<Nh;j++){
-    buildRoomG(cat.rooms[j-1], {ox:cx,oz:cz,an:eAng(j),near:apoH+COR_L,splay:splayH,maxL:40});
+  for(let j=1;j<=K;j++){   // j over ROOMS, not walls (small halls have extra blank walls)
+    buildRoomG(cat.rooms[j-1], {ox:cx,oz:cz,an:eAng(j),near:apoH+COR_L,splay:splayH,maxL:40,exitLabel:(cat.label+' HALL').toUpperCase(),dimCorridor:true});
   }
   // passages + the quiet step between rotunda and island
-  buildPassage(0,0,an,APO);
-  buildPassage(cx,cz,back,apoH);
+  buildPassage(0,0,an,APO,false);                 // foyer side: unlit, moody doorway
+  const pl=buildPassage(cx,cz,back,apoH);          // island side: lamp joins the island group
+  if(pl) hl.add(pl);
   linkPortals(0,0,an,APO+COR_L, cx,cz,back,apoH+COR_L);
-  hubZones.push({label:cat.label+' Hall', cx,cz, apo:apoH});
+  hubZones.push({label:cat.label+' Hall', cx,cz, apo:apoH, lights:hl});
 }
 
 CATEGORIES.forEach((cat,i)=>{
   if(cat.rooms.length===1){
-    buildRoomG(cat.rooms[0], {ox:0,oz:0,an:edgeAngle(i),near:ROOM_NEAR,splay:SPLAY,maxL:80});
+    buildRoomG(cat.rooms[0], {ox:0,oz:0,an:edgeAngle(i),near:ROOM_NEAR,splay:SPLAY,maxL:80,exitLabel:'ENTRANCE FOYER'});
   } else {
     buildHub(cat,i);
   }
@@ -803,6 +836,8 @@ function locate(){
     curZone=zone;
     roomNameEl.textContent=name;
     roomZones.forEach((z,i)=>{ z.lights.visible=(i===zone); });
+    hubZones.forEach((hb,h)=>{ hb.lights.visible = (zone===1000+h) ||
+      (zone>=0 && zone<1000 && roomZones[zone].F.ox===hb.cx && roomZones[zone].F.oz===hb.cz); });
     if(zone>=0&&zone<1000) loadRoom(roomZones[zone]);
   }
 }
@@ -889,6 +924,56 @@ CATEGORIES.forEach((cat)=>{
 // forward=(-sin yaw,-cos yaw)=(nx,nz) => yaw=atan2(-nx,-nz). Correct above.
 selBtn.addEventListener('click',e=>{ e.stopPropagation(); selWrap.classList.toggle('open'); });
 
+/* ================= map ================= */
+const mapOv=document.getElementById('mapOv'), mapCv=document.getElementById('mapCv'),
+      mapBtn=document.getElementById('mapBtn');
+let mapOn=false, __mf=0;
+function toggleMap(){ mapOn=!mapOn; mapOv.style.display=mapOn?'flex':'none'; if(mapOn)drawMap(); }
+mapBtn.addEventListener('click',e=>{ e.stopPropagation(); toggleMap(); });
+mapOv.addEventListener('click',()=>toggleMap());
+addEventListener('keydown',e=>{ if(e.code==='KeyM'&&!inspecting) toggleMap(); });
+const shortLbl=l=>l.length>17?l.slice(0,16)+'\u2026':l;
+function drawMap(){
+  const ctx=mapCv.getContext('2d'), W=mapCv.width, H=mapCv.height, mx=W/2, my=H/2;
+  ctx.clearRect(0,0,W,H);
+  const inMain=Math.hypot(player.x,player.z)<150;
+  let C={x:0,z:0}, hallR=APO, title='ENTRANCE FOYER', spokes=[];
+  if(inMain){
+    spokes=CATEGORIES.map((cat,i)=>{
+      const single=cat.rooms.length===1;
+      const z=single?roomZones[zoneOfGallery[cat.rooms[0]]]:null;
+      return {an:edgeAngle(i), label:shortLbl(cat.label)+(single?'':' \u2192'), L:single?z.L:8,
+              zone:single?zoneOfGallery[cat.rooms[0]]:-9};
+    });
+  } else {
+    let best=null,bd=1e9;
+    for(const hb of hubZones){const d=Math.hypot(player.x-hb.cx,player.z-hb.cz); if(d<bd){bd=d;best=hb;}}
+    C={x:best.cx,z:best.cz}; hallR=best.apo; title=best.label.toUpperCase();
+    const cat=CATEGORIES.find(c=>c.label+' Hall'===best.label);
+    spokes=cat.rooms.map((gi,idx)=>{const z=roomZones[zoneOfGallery[gi]];
+      return {an:z.an,label:String(idx+1),L:z.L,zone:zoneOfGallery[gi]};});
+    spokes.push({an:Math.atan2(-C.x,-C.z),label:'FOYER',L:7,zone:-9});
+  }
+  const maxR=hallR+COR_L+Math.max(...spokes.map(sp=>sp.L))+2;
+  const sc=(Math.min(W,H)/2-40)/maxR;
+  ctx.strokeStyle='rgba(200,163,106,.9)'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.arc(mx,my,hallR*sc,0,7); ctx.stroke();
+  ctx.font='10px Verdana'; ctx.textAlign='center';
+  for(const sp of spokes){
+    const sx=Math.sin(sp.an), sy=-Math.cos(sp.an);
+    const r0=hallR*sc, r1=(hallR+COR_L+sp.L)*sc;
+    ctx.strokeStyle=sp.zone===curZone?'#fff3dc':'rgba(200,163,106,.5)';
+    ctx.lineWidth=sp.zone===curZone?13:9; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(mx+sx*r0,my+sy*r0); ctx.lineTo(mx+sx*r1,my+sy*r1); ctx.stroke();
+    ctx.fillStyle=sp.zone===curZone?'#fff':'#e8dcc2';
+    ctx.fillText(sp.label, mx+sx*(r1+16), my+sy*(r1+16)+3);
+  }
+  const pdx=(player.x-C.x)*sc, pdz=(player.z-C.z)*sc;
+  ctx.fillStyle='#ff6b4a'; ctx.beginPath(); ctx.arc(mx+pdx,my-pdz,5,0,7); ctx.fill();
+  ctx.fillStyle='#c8a36a'; ctx.font='13px Georgia'; ctx.fillText(title,mx,22);
+  ctx.fillStyle='#9a8f80'; ctx.font='9px Verdana'; ctx.fillText('M OR CLICK TO CLOSE',mx,H-10);
+}
+
 /* ================= animate ================= */
 const clock=new THREE.Clock();
 function animate(){
@@ -916,6 +1001,7 @@ function animate(){
   camera.position.set(player.x,EYE,player.z);
   camera.rotation.set(player.pitch,player.yaw,0);
   locate(); updateAim();
+  if(mapOn && !(++__mf%12)) drawMap();
   renderer.render(scene,camera);
 }
 locate();
