@@ -497,7 +497,7 @@ function buildRoomG(gi, F){
     holder.rotation.y=Math.atan2(wnx,wnz);
     // frame backing
     const back=new THREE.Mesh(new THREE.BoxGeometry(iw+0.14,ih+0.14,0.05),M.frame);
-    back.castShadow=true; back.position.z=0.03; holder.add(back);
+    back.position.z=0.03; holder.add(back);  // no castShadow: 1,483 casters would crush the shadow pass
     // image plane (placeholder material until texture loads)
     const plane=new THREE.Mesh(new THREE.PlaneGeometry(iw,ih),
       new THREE.MeshStandardMaterial({color:0x3a3128,roughness:.92}));
@@ -741,24 +741,31 @@ const loadedOrder=[];
 function loadRoom(z){
   if(z.loaded) return; z.loaded=true;
   loadedOrder.push(z);
-  for(const itm of z.items){
-    texLoader.load(CDN+itm.it.img+'?format=500w',tex=>{
-      tex.colorSpace=THREE.SRGBColorSpace; tex.anisotropy=8;
-      const ar=tex.image.width/tex.image.height;
-      let w=1.55,h=w/ar; if(h>1.75){h=1.75;w=h*ar;}
-      itm.plane.geometry.dispose();
-      itm.plane.geometry=new THREE.PlaneGeometry(w,h);
-      itm.plane.material.dispose();
-      itm.plane.material=new THREE.MeshStandardMaterial({map:tex,roughness:.62});
-      itm.back.geometry.dispose();
-      itm.back.geometry=new THREE.BoxGeometry(w+0.14,h+0.14,0.05);
-      itm.tex=tex;
-    });
-    if(itm.card.material===M.cardBlank){
-      itm.cardTex=drawCardTexture(itm.it.name,itm.it.code);
-      itm.card.material=new THREE.MeshBasicMaterial({map:itm.cardTex,transparent:true});
+  // stream in small batches so stepping into a room never freezes the frame
+  const queue=z.items.slice();
+  (function step(){
+    if(!z.loaded) return;             // room was unloaded mid-stream
+    for(const itm of queue.splice(0,5)){
+      texLoader.load(CDN+itm.it.img+'?format=500w',tex=>{
+        if(!z.loaded){tex.dispose();return;}
+        tex.colorSpace=THREE.SRGBColorSpace; tex.anisotropy=8;
+        const ar=tex.image.width/tex.image.height;
+        let w=1.55,h=w/ar; if(h>1.75){h=1.75;w=h*ar;}
+        itm.plane.geometry.dispose();
+        itm.plane.geometry=new THREE.PlaneGeometry(w,h);
+        itm.plane.material.dispose();
+        itm.plane.material=new THREE.MeshStandardMaterial({map:tex,roughness:.62});
+        itm.back.geometry.dispose();
+        itm.back.geometry=new THREE.BoxGeometry(w+0.14,h+0.14,0.05);
+        itm.tex=tex;
+      });
+      if(itm.card.material===M.cardBlank){
+        itm.cardTex=drawCardTexture(itm.it.name,itm.it.code);
+        itm.card.material=new THREE.MeshBasicMaterial({map:itm.cardTex,transparent:true});
+      }
     }
-  }
+    if(queue.length) setTimeout(step,50);
+  })();
   while(loadedOrder.length>4){
     const old=loadedOrder.shift();
     for(const itm of old.items){
