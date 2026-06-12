@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The Pinefinders Archive — A History of Fine Antique Pine</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{ --cream:#f3ecdc; --ink:#171310; --gold:#c8a36a; --grey:#9a8f80; }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;overflow:hidden;background:#0d0b09;font-family:Georgia,'Times New Roman',serif;color:var(--cream)}
+  #app{position:fixed;inset:0}
+  canvas{display:block}
+
+  /* ---------- entry / pause ---------- */
+  #entry{position:fixed;inset:0;background:radial-gradient(ellipse at 50% 40%, #1d1813 0%, #0b0907 70%);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:40;cursor:pointer;
+    transition:opacity .6s ease}
+  #entry.hidden{opacity:0;pointer-events:none}
+  #entry .brand{font-size:clamp(34px,6vw,64px);letter-spacing:.38em;text-indent:.38em;color:var(--cream);font-weight:400}
+  #entry .sub{font-style:italic;color:var(--gold);margin-top:14px;font-size:clamp(15px,2vw,20px);letter-spacing:.08em}
+  #entry .rule{width:120px;height:1px;background:var(--gold);opacity:.6;margin:34px 0}
+  #entry .cta{font-size:15px;letter-spacing:.25em;text-indent:.25em;color:var(--cream);opacity:.9;
+    border:1px solid rgba(200,163,106,.55);padding:13px 30px;border-radius:2px}
+  #entry .keys{margin-top:26px;font-size:12.5px;color:var(--grey);letter-spacing:.12em;font-family:Verdana,sans-serif}
+  #entry .loadnote{position:absolute;bottom:26px;font-size:11px;color:#6b6052;letter-spacing:.2em;font-family:Verdana,sans-serif}
+
+  /* ---------- HUD ---------- */
+  #roomTag{position:fixed;top:22px;right:26px;z-index:20;text-align:right;pointer-events:none;
+    opacity:0;transition:opacity .5s}
+  #roomTag.show{opacity:1}
+  #roomTag .r1{font-size:11px;letter-spacing:.3em;color:var(--gold);font-family:Verdana,sans-serif;margin-bottom:5px}
+  #roomTag .r2{font-size:21px;letter-spacing:.06em;color:var(--cream);text-shadow:0 1px 8px rgba(0,0,0,.7)}
+  #hint{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:20;font-size:12px;
+    color:rgba(243,236,220,.85);letter-spacing:.18em;font-family:Verdana,sans-serif;pointer-events:none;
+    background:rgba(13,11,9,.55);padding:8px 16px;border-radius:3px;opacity:0;transition:opacity .4s}
+  #hint.show{opacity:1}
+  #cross{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:15;pointer-events:none;
+    width:6px;height:6px;border-radius:50%;background:rgba(243,236,220,.65);box-shadow:0 0 6px rgba(0,0,0,.6);
+    transition:transform .15s,background .15s;opacity:0}
+  #cross.on{opacity:1}
+  #cross.hot{transform:translate(-50%,-50%) scale(1.9);background:var(--gold)}
+
+  /* ---------- room selector ---------- */
+  #selWrap{position:fixed;left:22px;bottom:22px;z-index:45;font-family:Verdana,sans-serif}
+  #selBtn{background:rgba(20,16,12,.82);border:1px solid rgba(200,163,106,.5);color:var(--cream);
+    font-size:11px;letter-spacing:.22em;padding:10px 16px;cursor:pointer;border-radius:2px;font-family:Verdana,sans-serif}
+  #selBtn:hover{border-color:var(--gold)}
+  #selList{display:none;position:absolute;bottom:46px;left:0;background:rgba(18,14,11,.94);
+    border:1px solid rgba(200,163,106,.45);border-radius:2px;min-width:230px;max-height:62vh;overflow:auto;
+    backdrop-filter:blur(4px)}
+  #selWrap.open #selList{display:block}
+  #selList div{padding:10px 18px;font-size:12px;letter-spacing:.08em;cursor:pointer;color:#d9d0bd;
+    font-family:Georgia,serif;border-bottom:1px solid rgba(255,255,255,.04)}
+  #selList div:hover{background:rgba(200,163,106,.14);color:#fff}
+  #selList div.foyer{color:var(--gold);letter-spacing:.2em;font-size:11.5px}
+
+  /* ---------- inspect view ---------- */
+  #inspect{position:fixed;inset:0;z-index:50;background:rgba(10,8,6,.93);display:none;
+    align-items:center;justify-content:center;backdrop-filter:blur(3px)}
+  #inspect.show{display:flex}
+  #inspect .panel{display:flex;gap:54px;align-items:center;max-width:1200px;width:92%;padding:30px}
+  #inspect .imgbox{flex:0 1 62%;display:flex;align-items:center;justify-content:center}
+  #inspect img{max-width:100%;max-height:82vh;box-shadow:0 30px 80px rgba(0,0,0,.75);border:1px solid rgba(255,255,255,.08);
+    background:#1a1713}
+  #inspect .meta{flex:1 1 320px;min-width:280px}
+  #inspect .meta .cat{font-size:10.5px;letter-spacing:.34em;color:var(--gold);font-family:Verdana,sans-serif;margin-bottom:18px}
+  #inspect .meta h2{font-size:30px;font-weight:400;line-height:1.25;color:var(--cream);margin-bottom:14px}
+  #inspect .meta .code{font-size:13px;letter-spacing:.26em;color:var(--grey);font-family:Verdana,sans-serif}
+  #inspect .meta .rule{width:64px;height:1px;background:rgba(200,163,106,.65);margin:30px 0}
+  #inspect .meta .touch{font-size:16px;font-style:italic;color:#cfc5af;line-height:1.6}
+  #inspect .meta a{color:var(--gold);text-decoration:none;border-bottom:1px solid rgba(200,163,106,.45)}
+  #inspect .meta a:hover{border-bottom-color:var(--gold)}
+  #inspClose{position:absolute;top:26px;right:34px;font-size:30px;color:#b6ab97;cursor:pointer;
+    background:none;border:none;font-family:Georgia,serif;line-height:1}
+  #inspClose:hover{color:#fff}
+  @media (max-width:880px){ #inspect .panel{flex-direction:column;gap:24px;overflow:auto;max-height:94vh}
+    #inspect img{max-height:52vh} }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<div id="entry">
+  <div class="brand">P I N E F I N D E R S</div>
+  <div class="sub">A History of Fine Antique Pine</div>
+  <div class="rule"></div>
+  <div class="cta">CLICK TO EXPLORE</div>
+  <div class="keys">W A S D &nbsp;MOVE &nbsp;&middot;&nbsp; MOUSE &nbsp;LOOK &nbsp;&middot;&nbsp; CLICK &nbsp;INSPECT &nbsp;&middot;&nbsp; ESC &nbsp;RELEASE</div>
+  <div class="loadnote" id="loadnote">PREPARING THE GALLERY&hellip;</div>
+</div>
+
+<div id="roomTag"><div class="r1">THE PINEFINDERS ARCHIVE</div><div class="r2" id="roomName">Entrance Foyer</div></div>
+<div id="hint">CLICK TO RESUME EXPLORING</div>
+<div id="cross"></div>
+
+<div id="selWrap">
+  <button id="selBtn">ROOMS &#9652;</button>
+  <div id="selList"></div>
+</div>
+
+<div id="inspect">
+  <button id="inspClose" title="Close">&times;</button>
+  <div class="panel">
+    <div class="imgbox"><img id="inspImg" alt=""></div>
+    <div class="meta">
+      <div class="cat" id="inspCat">CHESTS OF DRAWERS</div>
+      <h2 id="inspName">Item</h2>
+      <div class="code" id="inspCode"></div>
+      <div class="rule"></div>
+      <div class="touch">Looking for something like this? <a id="inspMail" href="mailto:info@pinefinders.co.uk">Get in touch</a>.</div>
+    </div>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+/* ================= CONSTANTS ================= */
+const CDN = 'https://images.squarespace-cdn.com/content/v1/53494301e4b0977680d23c4f/';
+const ROOMS = window.GALLERIES;                 // 10 categories
+const N = ROOMS.length;
+const ROT_R = 10;                               // rotunda circumradius
+const APO = ROT_R * Math.cos(Math.PI/N);        // apothem 9.51
+const EDGE = 2*ROT_R*Math.sin(Math.PI/N);       // edge len 6.18
+const DOOR_W = 2.4, DOOR_H = 2.7;
+const COR_L = 3.2;                              // corridor length
+const ROOM_NEAR = APO + COR_L;                  // radial distance of room near wall
+const ROOM_H = 4.4, ROT_H = 7.2, COR_H = 2.7;
+const SPACING = 2.1;                            // hanging spacing
+const EYE = 1.65, P_RAD = 0.42;
+const HALF = Math.PI/N;                         // 18 deg
+const SPLAY = Math.tan(HALF);
+
+/* room half width at local z (z measured from near wall) */
+const halfW = z => SPLAY*(ROOM_NEAR+z) - 0.55;
+
+/* ================= RENDERER / SCENE ================= */
+const renderer = new THREE.WebGLRenderer({antialias:true, powerPreference:'high-performance'});
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.12;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.getElementById('app').appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0d0b09);
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+const camera = new THREE.PerspectiveCamera(72, innerWidth/innerHeight, 0.1, 220);
+camera.rotation.order = 'YXZ';
+
+addEventListener('resize', ()=>{ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight); });
+
+/* ================= MATERIALS ================= */
+const M = {
+  wall:  new THREE.MeshStandardMaterial({color:0xf0e8d6, roughness:0.93, metalness:0.0}),
+  wallUp:new THREE.MeshStandardMaterial({color:0xe9dfc9, roughness:0.95}),
+  floor: new THREE.MeshStandardMaterial({color:0x17120e, roughness:0.16, metalness:0.55, envMapIntensity:1.1}),
+  ceil:  new THREE.MeshStandardMaterial({color:0x161311, roughness:0.9}),
+  track: new THREE.MeshStandardMaterial({color:0x0e0d0c, roughness:0.55, metalness:0.6}),
+  frame: new THREE.MeshStandardMaterial({color:0x2b2118, roughness:0.5, metalness:0.15}),
+  gold:  new THREE.MeshStandardMaterial({color:0xc8a36a, roughness:0.35, metalness:0.8}),
+  spine: new THREE.MeshStandardMaterial({color:0xeee5d0, roughness:0.93}),
+  dark:  new THREE.MeshStandardMaterial({color:0x1d1813, roughness:0.8}),
+};
+
+/* ================= HELPERS ================= */
+const colliders = [];   // {ax,az,bx,bz}
+function addCollider(ax,az,bx,bz){ colliders.push({ax,az,bx,bz}); }
+
+/* wall box between two XZ points. y0=base, h=height, t=thickness */
+function wallBox(parent, ax,az,bx,bz, h, y0=0, t=0.22, mat=M.wall, collide=true){
+  const dx=bx-ax, dz=bz-az, len=Math.hypot(dx,dz);
+  const g = new THREE.BoxGeometry(len, h, t);
+  const m = new THREE.Mesh(g, mat);
+  m.position.set((ax+bx)/2, y0+h/2, (az+bz)/2);
+  m.rotation.y = -Math.atan2(dz, dx);
+  m.castShadow = true; m.receiveShadow = true;
+  parent.add(m);
+  if (collide && y0 < 1.4) addCollider(ax,az,bx,bz);
+  return m;
+}
+
+/* canvas-texture plane */
+function textPlane(draw, w, h, pw, ph){
+  const c = document.createElement('canvas'); c.width=pw; c.height=ph;
+  draw(c.getContext('2d'), pw, ph);
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
+  const mat = new THREE.MeshBasicMaterial({map:tex, transparent:true});
+  return new THREE.Mesh(new THREE.PlaneGeometry(w,h), mat);
+}
+
+/* ================= FLOOR (one slab for all) ================= */
+{
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(60, 72), M.floor);
+  floor.rotation.x = -Math.PI/2; floor.receiveShadow = true;
+  scene.add(floor);
+}
+
+/* ================= ROTUNDA ================= */
+const vert = i => { const a=i*2*Math.PI/N; return [ROT_R*Math.sin(a), ROT_R*Math.cos(a)]; };
+const edgeAngle = i => (i+0.5)*2*Math.PI/N;     // outward normal angle of edge i
+const dirOf = a => [Math.sin(a), Math.cos(a)];
+
+const rotunda = new THREE.Group(); scene.add(rotunda);
+for (let i=0;i<N;i++){
+  const [ax,az]=vert(i), [bx,bz]=vert(i+1);
+  const ex=bx-ax, ez=bz-az, len=Math.hypot(ex,ez), ux=ex/len, uz=ez/len;
+  const mid=len/2, g=DOOR_W/2;
+  // lower flanks beside doorway
+  wallBox(rotunda, ax,az, ax+ux*(mid-g),az+uz*(mid-g), DOOR_H, 0, 0.3);
+  wallBox(rotunda, ax+ux*(mid+g),az+uz*(mid+g), bx,bz, DOOR_H, 0, 0.3);
+  // header + upper band
+  wallBox(rotunda, ax,az,bx,bz, ROT_H-DOOR_H, DOOR_H, 0.3, M.wallUp, false);
+  // gold door surround
+  const fa=[ax+ux*(mid-g),az+uz*(mid-g)], fb=[ax+ux*(mid+g),az+uz*(mid+g)];
+  wallBox(rotunda, fa[0],fa[1],fb[0],fb[1], 0.1, DOOR_H+0.02, 0.34, M.gold, false);
+  // lintel sign with room name (faces centre)
+  const an = edgeAngle(i), [nx,nz]=dirOf(an);
+  const sign = textPlane((ctx,w,h)=>{
+    ctx.clearRect(0,0,w,h);
+    ctx.fillStyle='rgba(23,18,13,0.92)'; ctx.fillRect(0,0,w,h);
+    ctx.strokeStyle='rgba(200,163,106,0.8)'; ctx.lineWidth=4; ctx.strokeRect(10,10,w-20,h-20);
+    ctx.fillStyle='#f0e8d6'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    let fs=64; ctx.font=fs+'px Georgia';
+    while (ctx.measureText(ROOMS[i].label.toUpperCase()).width > w-90 && fs>30){ fs-=2; ctx.font=fs+'px Georgia'; }
+    ctx.fillText(ROOMS[i].label.toUpperCase(), w/2, h/2+2);
+  }, 2.7, 0.5, 1024, 190);
+  const sd = APO-0.18;
+  sign.position.set(nx*sd, DOOR_H+0.55, nz*sd);
+  sign.rotation.y = an+Math.PI;          // face centre
+  rotunda.add(sign);
+}
+/* rotunda ceiling + oculus ring */
+{
+  const shape = new THREE.Shape();
+  for(let i=0;i<N;i++){ const [x,z]=vert(i); i?shape.lineTo(x,z):shape.moveTo(x,z); }
+  shape.closePath();
+  const hole = new THREE.Path(); const OR=3.2;
+  for(let i=0;i<=32;i++){ const a=i/32*2*Math.PI; const x=OR*Math.sin(a),z=OR*Math.cos(a); i?hole.lineTo(x,z):hole.moveTo(x,z); }
+  shape.holes.push(hole);
+  const ceil = new THREE.Mesh(new THREE.ShapeGeometry(shape), M.ceil);
+  ceil.rotation.x = Math.PI/2; ceil.position.y = ROT_H; rotunda.add(ceil);
+  // glowing oculus disc slightly above
+  const oc = new THREE.Mesh(new THREE.CircleGeometry(OR,48),
+      new THREE.MeshBasicMaterial({color:0xfff3dc}));
+  oc.rotation.x = Math.PI/2; oc.position.y = ROT_H+0.35; rotunda.add(oc);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(OR,0.09,12,64), M.gold);
+  ring.rotation.x = Math.PI/2; ring.position.y=ROT_H+0.02; rotunda.add(ring);
+}
+/* title wall — mounted on upper band of edge 5 (opposite spawn) */
+const TITLE_EDGE = 5;
+{
+  const an = edgeAngle(TITLE_EDGE), [nx,nz]=dirOf(an);
+  const t = textPlane((ctx,w,h)=>{
+    ctx.clearRect(0,0,w,h);
+    ctx.fillStyle='#33291b'; ctx.textAlign='center';
+    ctx.font='150px Georgia';
+    const word='PINEFINDERS', ls=58;
+    let tw=0; for(const ch of word) tw+=ctx.measureText(ch).width+ls; tw-=ls;
+    let x=(w-tw)/2;
+    for(const ch of word){ ctx.fillText(ch, x+ctx.measureText(ch).width/2, 240); x+=ctx.measureText(ch).width+ls; }
+    ctx.font='italic 64px Georgia'; ctx.fillStyle='#8a6b3f';
+    ctx.fillText('A History of Fine Antique Pine', w/2, 380);
+    ctx.strokeStyle='rgba(138,107,63,.8)'; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.moveTo(w/2-260,440); ctx.lineTo(w/2+260,440); ctx.stroke();
+  }, 7.3, 2.02, 2048, 560);
+  const d = APO-0.2;
+  t.position.set(nx*d, DOOR_H+2.05, nz*d);
+  t.rotation.y = an+Math.PI;
+  rotunda.add(t);
+}
+/* central dais */
+{
+  const dais = new THREE.Mesh(new THREE.CylinderGeometry(2.3,2.5,0.18,48), M.dark);
+  dais.position.y=0.09; dais.receiveShadow=true; rotunda.add(dais);
+  const star = new THREE.Mesh(new THREE.TorusGeometry(1.6,0.05,8,64), M.gold);
+  star.rotation.x=Math.PI/2; star.position.y=0.19; rotunda.add(star);
+}
+/* rotunda lights */
+{
+  const hemi = new THREE.HemisphereLight(0xfff1dd, 0x2a2018, 0.55); scene.add(hemi);
+  const oc = new THREE.PointLight(0xffe9c8, 130, 0, 2); oc.position.set(0, ROT_H-0.6, 0);
+  oc.castShadow=true; oc.shadow.mapSize.set(1024,1024); rotunda.add(oc);
+  for(let i=0;i<N;i+=2){
+    const an=edgeAngle(i), [nx,nz]=dirOf(an);
+    const p=new THREE.PointLight(0xffe2b8, 40, 14, 2); p.position.set(nx*6.5, 4.6, nz*6.5); rotunda.add(p);
+  }
+}
+
+/* ================= ROOMS ================= */
+const roomZones = [];     // per-room data for locate/lights/textures
+const clickables = [];    // raycast targets (active room only filtered at use)
+
+function makeLabelCard(name, code){
+  return textPlane((ctx,w,h)=>{
+    ctx.fillStyle='#efe7d4'; ctx.fillRect(0,0,w,h);
+    ctx.strokeStyle='rgba(60,48,36,.25)'; ctx.lineWidth=3; ctx.strokeRect(4,4,w-8,h-8);
+    ctx.fillStyle='#241c14'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    let fs=34; ctx.font=fs+'px Georgia';
+    while(ctx.measureText(name).width>w-50 && fs>16){fs-=1;ctx.font=fs+'px Georgia';}
+    ctx.fillText(name, w/2, code? h*0.36 : h*0.5);
+    if(code){ ctx.font='22px Verdana'; ctx.fillStyle='#7c7060';
+      ctx.fillText(code.split('').join(' '), w/2, h*0.72); }
+  }, 0.62, 0.175, 640, 180);
+}
+
+function buildRoom(i){
+  const data = ROOMS[i];
+  const an = edgeAngle(i);
+  const [nx,nz] = dirOf(an);             // outward
+  const px = Math.cos(an), pz = -Math.sin(an);   // lateral
+  const W2L = (lx,lz)=>[ nx*(ROOM_NEAR+lz)+px*lx, nz*(ROOM_NEAR+lz)+pz*lx ];
+
+  /* --- choose length for capacity --- */
+  const n = data.items.length;
+  let L = 14;
+  const cnt = len => Math.max(0, Math.floor((len-1.8)/SPACING)+1);  // mirrors addSlotsAlong (m=0.9)
+  const cap = (L)=>{
+    const sw  = Math.hypot(L-2.4, halfW(L-1.2)-halfW(1.2));
+    const far = 2*(halfW(L)-1.0);
+    const flank = (halfW(0)-0.7) - (DOOR_W/2+0.7);
+    const panel = (L-10)/2 - 1.0;
+    return 2*cnt(sw) + cnt(far) + 2*cnt(flank) + 4*cnt(panel);
+  };
+  while (cap(L) < n && L < 40) L += 0.5;
+
+  const g = new THREE.Group(); scene.add(g);
+  const lights = new THREE.Group(); lights.visible = false; g.add(lights);
+
+  /* --- corridor --- */
+  {
+    const a1=W2L(-DOOR_W/2,-COR_L), b1=W2L(-DOOR_W/2,0);
+    const a2=W2L( DOOR_W/2,-COR_L), b2=W2L( DOOR_W/2,0);
+    wallBox(g, a1[0],a1[1], b1[0],b1[1], COR_H, 0, 0.24);
+    wallBox(g, a2[0],a2[1], b2[0],b2[1], COR_H, 0, 0.24);
+    // corridor ceiling
+    const cc = new THREE.Mesh(new THREE.BoxGeometry(DOOR_W+0.5, 0.18, COR_L+0.6), M.ceil);
+    const cm = W2L(0,-COR_L/2);
+    cc.position.set(cm[0], COR_H+0.09, cm[1]); cc.rotation.y = an; g.add(cc);
+    const lamp = new THREE.PointLight(0xffe9c8, 10, 6, 2);
+    lamp.position.set(cm[0], COR_H-0.25, cm[1]); g.add(lamp);
+  }
+
+  /* --- shell walls --- */
+  const w0=halfW(0), wL=halfW(L);
+  const NA=W2L(-w0,0), NB=W2L(-DOOR_W/2,0), NC=W2L(DOOR_W/2,0), ND=W2L(w0,0);
+  wallBox(g, NA[0],NA[1], NB[0],NB[1], ROOM_H, 0, 0.24);
+  wallBox(g, NC[0],NC[1], ND[0],ND[1], ROOM_H, 0, 0.24);
+  wallBox(g, NB[0],NB[1], NC[0],NC[1], ROOM_H-DOOR_H, DOOR_H, 0.24, M.wall, false); // header
+  const SA=W2L(-w0,0), SB=W2L(-wL,L), SC=W2L(w0,0), SD=W2L(wL,L);
+  wallBox(g, SA[0],SA[1], SB[0],SB[1], ROOM_H, 0, 0.24);
+  wallBox(g, SC[0],SC[1], SD[0],SD[1], ROOM_H, 0, 0.24);
+  const FA=W2L(-wL,L), FB=W2L(wL,L);
+  wallBox(g, FA[0],FA[1], FB[0],FB[1], ROOM_H, 0, 0.24);
+
+  /* --- ceiling (trapezoid) --- */
+  {
+    const sh = new THREE.Shape();
+    sh.moveTo(-w0,0); sh.lineTo(-wL,L); sh.lineTo(wL,L); sh.lineTo(w0,0); sh.closePath();
+    const mesh = new THREE.Mesh(new THREE.ShapeGeometry(sh), M.ceil);
+    mesh.rotation.x = Math.PI/2;          // shape (x, y->z)
+    const o = W2L(0,0);
+    mesh.position.set(o[0], ROOM_H, o[1]);
+    mesh.rotation.z = -an;                // align local +y(shape) with outward
+    g.add(mesh);
+  }
+
+  /* --- two freestanding panels, offset so the doorway sightline stays open --- */
+  const panels=[];   // {x (lateral offset), z0, z1}
+  {
+    const pl=(L-10)/2;
+    panels.push({x:-halfW(L*0.3)*0.42, z0:4.0,       z1:4.0+pl});
+    panels.push({x: halfW(L*0.7)*0.42, z0:L-4.0-pl,  z1:L-4.0});
+    for(const p of panels){
+      const a=W2L(p.x,p.z0), b=W2L(p.x,p.z1);
+      const len=Math.hypot(b[0]-a[0],b[1]-a[1]);
+      const box=new THREE.Mesh(new THREE.BoxGeometry(len,3.3,0.36), M.spine);
+      box.position.set((a[0]+b[0])/2, 1.65, (a[1]+b[1])/2);
+      box.rotation.y = -Math.atan2(b[1]-a[1], b[0]-a[0]);
+      box.castShadow=true; box.receiveShadow=true; g.add(box);
+      const crown=new THREE.Mesh(new THREE.BoxGeometry(len+0.08,0.07,0.46), M.dark);
+      crown.position.copy(box.position); crown.position.y=3.32; crown.rotation.y=box.rotation.y; g.add(crown);
+      addCollider(a[0],a[1],b[0],b[1]);
+    }
+  }
+
+  /* --- room name on far wall --- */
+  {
+    const t = textPlane((ctx,w,h)=>{
+      ctx.clearRect(0,0,w,h);
+      ctx.fillStyle='#3a2f22'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      let fs=92; ctx.font=fs+'px Georgia';
+      const s=data.label.toUpperCase().split('').join(' ');
+      while(ctx.measureText(s).width>w-80&&fs>40){fs-=2;ctx.font=fs+'px Georgia';}
+      ctx.fillText(s,w/2,h/2);
+    }, 6.0, 0.62, 2048, 210);
+    const p=W2L(0,L-0.14);
+    t.position.set(p[0], 3.78, p[1]); t.rotation.y = an+Math.PI; g.add(t);
+  }
+
+  /* ---------- hanging walls: build list of wall runs, then place items ---------- */
+  // Each run: {ax,az,bx,bz (local), faceSign} — items hang facing the visitor side.
+  // Local coords: lx across (left negative), lz depth into room from ROOM_NEAR.
+  const m=0.9; // margin from wall ends
+  const slots=[];
+  // surf = distance from the slot line to the visible wall surface
+  function addSlotsAlong(ax,az,bx,bz, nlx,nlz, surf){
+    const len=Math.hypot(bx-ax,bz-az);
+    const count=Math.floor((len-2*m)/SPACING)+1;
+    if(count<1) return;
+    const used=(count-1)*SPACING;
+    for(let k=0;k<count;k++){
+      const t=(len/2-used/2+k*SPACING)/len;
+      slots.push({lx:ax+(bx-ax)*t+nlx*surf, lz:az+(bz-az)*t+nlz*surf, nlx, nlz});
+    }
+  }
+  // side walls (centre-line along ±halfW; surface 0.11 inward)
+  for(const side of [-1,1]){
+    const z0=1.2, z1=L-1.2;
+    const x0=side*halfW(z0), x1=side*halfW(z1);
+    const dx=x1-x0, dz=z1-z0, dl=Math.hypot(dx,dz);
+    let nx2=-dz/dl, nz2=dx/dl;
+    if(nx2*side>0){nx2=-nx2;nz2=-nz2;}
+    addSlotsAlong(x0,z0,x1,z1,nx2,nz2,0.12);
+  }
+  // far wall
+  { const hw=halfW(L)-1.0; addSlotsAlong(-hw,L,hw,L,0,-1,0.12); }
+  // panel faces (surface at ±0.18 from panel centre-line)
+  for(const p of panels){
+    for(const sgn of [-1,1])
+      addSlotsAlong(p.x,p.z0+0.5,p.x,p.z1-0.5,sgn,0,0.19);
+  }
+  // near-wall flanks beside the door
+  for(const sgn of [-1,1]){
+    const x0=sgn*(DOOR_W/2+0.7), x1=sgn*(halfW(0)-0.7);
+    if(Math.abs(x1)>Math.abs(x0)+1.0) addSlotsAlong(x0,0,x1,0,0,1,0.12);
+  }
+
+  /* ---------- place items into slots ---------- */
+  const items=[];
+  const nItems=Math.min(data.items.length, slots.length);
+  for(let k=0;k<nItems;k++){
+    const it=data.items[k], sl=slots[k];
+    // default placeholder size (rebuilt on texture load)
+    const iw=1.25, ih=1.25;
+    const holder=new THREE.Group();
+    // world position/orientation
+    const wp=W2L(sl.lx, sl.lz);
+    holder.position.set(wp[0],1.7,wp[1]);
+    // outward normal in world
+    const wnx=px*sl.nlx+nx*sl.nlz, wnz=pz*sl.nlx+nz*sl.nlz;
+    holder.rotation.y=Math.atan2(wnx,wnz);
+    // frame backing
+    const back=new THREE.Mesh(new THREE.BoxGeometry(iw+0.14,ih+0.14,0.05),M.frame);
+    back.castShadow=true; back.position.z=0.03; holder.add(back);
+    // image plane (placeholder material until texture loads)
+    const plane=new THREE.Mesh(new THREE.PlaneGeometry(iw,ih),
+      new THREE.MeshStandardMaterial({color:0x3a3128,roughness:.92}));
+    plane.position.z=0.085; holder.add(plane);
+    // label card
+    const card=makeLabelCard(it.name,it.code);
+    card.position.set(0,-0.96,0.07); holder.add(card);
+    // clickable proxy
+    plane.userData={name:it.name,code:it.code,img:it.img,catLabel:data.label};
+    clickables.push(plane);
+    g.add(holder);
+    items.push({holder,plane,back,it});
+  }
+
+  /* ---------- per-piece spotlights + track ---------- */
+  // group slots by their wall normal direction to build track beams; simpler: one fixture per item
+  items.forEach((itm,k)=>{
+    const h=itm.holder;
+    const fwd=new THREE.Vector3(0,0,1).applyEuler(h.rotation);
+    const fp=h.position.clone().add(fwd.clone().multiplyScalar(1.55)); fp.y=ROOM_H-0.32;
+    // fixture body on every piece (visual track lighting)
+    const fix=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.07,0.16,10),M.track);
+    fix.position.copy(fp); fix.position.y-=0.10; g.add(fix);
+    // real spotlight every 3rd piece, washing its neighbours too
+    if(k%3===0){
+      const spot=new THREE.SpotLight(0xffe7c2, 60, 13, 0.78, 0.6, 1.7);
+      spot.position.copy(fp);
+      const tgt=new THREE.Object3D(); tgt.position.copy(h.position); tgt.position.y=1.5;
+      spot.target=tgt; lights.add(spot); lights.add(tgt);
+    }
+  });
+  // room fill + a couple of shadow spots
+  {
+    const c=W2L(0,L*0.35), c2=W2L(0,L*0.75);
+    const f1=new THREE.PointLight(0xffe9cf, 30, 0, 1.9); f1.position.set(c[0],ROOM_H-0.6,c[1]); lights.add(f1);
+    const f2=new THREE.PointLight(0xffe9cf, 30, 0, 1.9); f2.position.set(c2[0],ROOM_H-0.6,c2[1]); lights.add(f2);
+    const sh=new THREE.SpotLight(0xffe7c2, 14, 18, 0.55, 0.7, 1.8);
+    sh.position.set(c[0],ROOM_H-0.3,c[1]); sh.castShadow=true; sh.shadow.mapSize.set(1024,1024);
+    sh.shadow.bias=-0.0004;
+    const tgt=new THREE.Object3D(); const tp=W2L(0,L*0.62); tgt.position.set(tp[0],0.4,tp[1]);
+    sh.target=tgt; lights.add(sh); lights.add(tgt);
+    // corridor lamp glow
+    const cl=new THREE.PointLight(0xffe2b8, 12, 8, 1.8);
+    const cp=W2L(0,-COR_L/2); cl.position.set(cp[0],COR_H-0.25,cp[1]); lights.add(cl);
+  }
+
+  g.add(lights);
+  scene.add(g);
+  roomZones.push({i,an,nx,nz,px,pz,L,group:g,lights,items,loaded:false});
+}
+for(let i=0;i<N;i++) buildRoom(i);
+
+/* ================= player & controls ================= */
+
+const titleAn=edgeAngle(TITLE_EDGE);
+const player={x:0,z:0,yaw:0,pitch:0};
+{
+  const [dx,dz]=dirOf(titleAn);
+  player.x=-dx*3.5; player.z=-dz*3.5;
+  player.yaw=Math.atan2(-dx,-dz);   // camera forward is (-sin yaw, -cos yaw)
+}
+camera.position.set(player.x,EYE,player.z);
+
+const keys={};
+addEventListener('keydown',e=>{keys[e.code]=true; if(e.code==='Escape')closeInspect(false);});
+addEventListener('keyup',e=>{keys[e.code]=false;});
+
+const entry=document.getElementById('entry');
+const hint=document.getElementById('hint');
+const cross=document.getElementById('cross');
+const roomTag=document.getElementById('roomTag');
+const inspect=document.getElementById('inspect');
+let locked=false, inspecting=false, everLocked=false;
+document.getElementById('loadnote').textContent='';
+
+entry.addEventListener('click',()=>{ document.body.requestPointerLock(); });
+document.addEventListener('pointerlockchange',()=>{
+  locked = document.pointerLockElement===document.body;
+  entry.classList.toggle('hidden', locked||inspecting);
+  cross.classList.toggle('on', locked);
+  if(locked){
+    roomTag.classList.add('show');
+    if(!everLocked){ everLocked=true; }
+    else { hint.classList.add('show'); setTimeout(()=>hint.classList.remove('show'),2200); }
+  }
+});
+
+addEventListener('mousemove',e=>{
+  if(!locked) return;
+  player.yaw -= e.movementX*0.0023;
+  player.pitch -= e.movementY*0.0023;
+  player.pitch=Math.max(-1.35,Math.min(1.35,player.pitch));
+});
+
+/* collision: circle vs segment push-out */
+function collide(nx2,nz2){
+  for(let pass=0;pass<2;pass++)
+  for(const s of colliders){
+    const dx=s.bx-s.ax, dz=s.bz-s.az, l2=dx*dx+dz*dz;
+    let t=((nx2-s.ax)*dx+(nz2-s.az)*dz)/l2; t=Math.max(0,Math.min(1,t));
+    const cx=s.ax+dx*t, cz=s.az+dz*t;
+    const ex=nx2-cx, ez=nz2-cz; const d=Math.hypot(ex,ez);
+    if(d<P_RAD&&d>1e-6){ const push=(P_RAD-d)/d; nx2+=ex*push; nz2+=ez*push; }
+  }
+  return [nx2,nz2];
+}
+
+/* ================= lazy texture loading ================= */
+const texLoader=new THREE.TextureLoader();
+texLoader.crossOrigin='anonymous';
+const loadedOrder=[];
+function loadRoom(z){
+  if(z.loaded) return; z.loaded=true;
+  loadedOrder.push(z);
+  for(const itm of z.items){
+    texLoader.load(CDN+itm.it.img+'?format=500w',tex=>{
+      tex.colorSpace=THREE.SRGBColorSpace; tex.anisotropy=8;
+      const ar=tex.image.width/tex.image.height;
+      let w=1.55,h=w/ar; if(h>1.75){h=1.75;w=h*ar;}
+      itm.plane.geometry.dispose();
+      itm.plane.geometry=new THREE.PlaneGeometry(w,h);
+      itm.plane.material.dispose();
+      itm.plane.material=new THREE.MeshStandardMaterial({map:tex,roughness:.62});
+      itm.back.geometry.dispose();
+      itm.back.geometry=new THREE.BoxGeometry(w+0.14,h+0.14,0.05);
+      itm.tex=tex;
+    });
+  }
+  while(loadedOrder.length>4){
+    const old=loadedOrder.shift();
+    for(const itm of old.items){
+      if(itm.tex){
+        itm.tex.dispose(); itm.tex=null;
+        itm.plane.material.dispose();
+        itm.plane.material=new THREE.MeshStandardMaterial({color:0x3a3128,roughness:.92});
+      }
+    }
+    old.loaded=false;
+  }
+}
+
+/* ================= room location ================= */
+const roomNameEl=document.getElementById('roomName');
+let curZone=-2;
+function locate(){
+  const r=Math.hypot(player.x,player.z);
+  let zone=-1;
+  if(r>APO-0.5){
+    let th=Math.atan2(player.x,player.z); if(th<0)th+=Math.PI*2;
+    const i=(Math.round(th/(2*Math.PI/N)-0.5)+N)%N;
+    const z=roomZones[i];
+    const lz=player.x*z.nx+player.z*z.nz-ROOM_NEAR;
+    if(lz>-COR_L-0.5) zone=i;
+  }
+  if(zone!==curZone){
+    curZone=zone;
+    roomNameEl.textContent = zone<0?'Entrance Foyer':ROOMS[zone].label;
+    roomZones.forEach((z,i)=>{ z.lights.visible=(i===zone); });
+    if(zone>=0) loadRoom(roomZones[zone]);
+  }
+}
+
+/* ================= inspect overlay ================= */
+const inspImg=document.getElementById('inspImg');
+const inspName=document.getElementById('inspName');
+const inspCode=document.getElementById('inspCode');
+const inspCat=document.getElementById('inspCat');
+function openInspect(d){
+  inspecting=true;
+  inspImg.src=CDN+d.img+'?format=1500w';
+  inspName.textContent=d.name;
+  inspCode.textContent='STOCK CODE '+d.code;
+  inspCat.textContent=d.catLabel.toUpperCase();
+  inspect.classList.add('show');
+  entry.classList.add('hidden');
+  document.exitPointerLock();
+}
+function closeInspect(relock=true){
+  if(!inspecting) return;
+  inspecting=false;
+  inspect.classList.remove('show');
+  inspImg.src='';
+  if(relock){
+    const p=document.body.requestPointerLock();
+    if(p&&p.catch) p.catch(()=>{ entry.classList.remove('hidden'); });
+  } else entry.classList.remove('hidden');
+}
+document.getElementById('inspClose').addEventListener('click',e=>{e.stopPropagation();closeInspect();});
+inspect.addEventListener('click',e=>{ if(e.target===inspect) closeInspect(); });
+
+/* aim + click */
+const ray=new THREE.Raycaster(); ray.far=6.5;
+let hot=null;
+function updateAim(){
+  if(!locked){ if(hot){hot=null;cross.classList.remove('hot');} return; }
+  ray.setFromCamera({x:0,y:0},camera);
+  const hits=ray.intersectObjects(clickables,false);
+  hot=hits.length?hits[0].object:null;
+  cross.classList.toggle('hot',!!hot);
+}
+addEventListener('mousedown',e=>{
+  if(!locked||e.button!==0||!hot||inspecting) return;
+  openInspect(hot.userData);
+});
+
+/* ================= room selector ================= */
+const selBtn=document.getElementById('selBtn');
+const selWrap=document.getElementById('selWrap');
+const selList=document.getElementById('selList');
+function addSel(label,fn,cls){
+  const d=document.createElement('div'); d.textContent=label; if(cls)d.className=cls;
+  d.addEventListener('click',ev=>{ev.stopPropagation(); fn(); selWrap.classList.remove('open');
+    document.body.requestPointerLock();});
+  selList.appendChild(d);
+}
+addSel('Entrance Foyer',()=>{
+  player.x=0;player.z=0;
+  const[dx,dz]=dirOf(titleAn); player.yaw=Math.atan2(-dx,-dz); player.pitch=0; locate();
+},'foyer');
+ROOMS.forEach((r,i)=>{
+  addSel(r.label,()=>{
+    const z=roomZones[i];
+    player.x=z.nx*(ROOM_NEAR+1.2); player.z=z.nz*(ROOM_NEAR+1.2);
+    player.yaw=Math.atan2(-z.nx,-z.nz); player.pitch=0;  // face deeper into room
+    locate();
+  });
+});
+// face INTO the room means looking outward from centre: forward=(nx,nz) => yaw=atan2(-nx,-nz)? 
+// forward=(-sin yaw,-cos yaw)=(nx,nz) => yaw=atan2(-nx,-nz). Correct above.
+selBtn.addEventListener('click',e=>{ e.stopPropagation(); selWrap.classList.toggle('open'); });
+
+/* ================= animate ================= */
+const clock=new THREE.Clock();
+function animate(){
+  requestAnimationFrame(animate);
+  if(window.__stop)return;
+  const dt=Math.min(clock.getDelta(),0.05);
+  if(locked&&!inspecting){
+    const sp=(keys['ShiftLeft']||keys['ShiftRight'])?6.4:3.9;
+    let mx=0,mz=0;
+    if(keys['KeyW']||keys['ArrowUp'])mz+=1;
+    if(keys['KeyS']||keys['ArrowDown'])mz-=1;
+    if(keys['KeyA']||keys['ArrowLeft'])mx-=1;
+    if(keys['KeyD']||keys['ArrowRight'])mx+=1;
+    if(mx||mz){
+      const l=Math.hypot(mx,mz); mx/=l; mz/=l;
+      const s=Math.sin(player.yaw), c=Math.cos(player.yaw);
+      // forward=(-s,-c), right=(c,-s)
+      let nx2=player.x+(-s*mz+c*mx)*sp*dt;
+      let nz2=player.z+(-c*mz-s*mx)*sp*dt;
+      [nx2,nz2]=collide(nx2,nz2);
+      player.x=nx2; player.z=nz2;
+    }
+  }
+  camera.position.set(player.x,EYE,player.z);
+  camera.rotation.set(player.pitch,player.yaw,0);
+  locate(); updateAim();
+  renderer.render(scene,camera);
+}
+locate();
+window.__dbg={scene,camera,renderer,THREE,roomZones,colliders,player,openInspect,clickables};
+animate();
+</script>
+</body>
+</html>
