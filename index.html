@@ -56,6 +56,9 @@
   #selList div:hover{background:rgba(200,163,106,.14);color:#fff}
   #selList div.foyer{color:var(--gold);letter-spacing:.2em;font-size:11.5px}
 
+  /* ---------- passage blink ---------- */
+  #fade{position:fixed;inset:0;background:#000;opacity:0;pointer-events:none;z-index:30;transition:opacity .18s ease}
+
   /* ---------- inspect view ---------- */
   #inspect{position:fixed;inset:0;z-index:50;background:rgba(10,8,6,.93);display:none;
     align-items:center;justify-content:center;backdrop-filter:blur(3px)}
@@ -95,6 +98,7 @@
 <div id="hint">CLICK TO RESUME EXPLORING</div>
 <div id="keysbar">W A S D &nbsp;MOVE &nbsp;&middot;&nbsp; MOUSE &nbsp;LOOK &nbsp;&middot;&nbsp; CLICK &nbsp;INSPECT &nbsp;&middot;&nbsp; ESC &nbsp;RELEASE</div>
 <div id="cross"></div>
+<div id="fade"></div>
 
 <div id="selWrap">
   <button id="selBtn">ROOMS &#9652;</button>
@@ -128,8 +132,17 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
 /* ================= CONSTANTS ================= */
 const CDN = 'https://images.squarespace-cdn.com/content/v1/53494301e4b0977680d23c4f/';
-const ROOMS = window.GALLERIES;                 // 10 categories
-const N = ROOMS.length;
+const ROOMS = window.GALLERIES;                 // 24 display rooms
+/* The rotunda keeps one door per CATEGORY. Categories whose collection has
+   outgrown a single room (cupboards, wardrobes, chests) lead to an ante-hall
+   ("hub") with numbered rooms around it; the rest open straight into a room. */
+const CAT_DEFS = [
+  ['bookcases','Bookcases'], ['boxes','Boxes, Trunks & Chests'], ['chairs','Chairs & Benches'],
+  ['chests','Chests of Drawers'], ['cupboards','Cupboards'], ['desks','Desks'],
+  ['dressers','Dressers'], ['tables','Tables'], ['wardrobes','Wardrobes'], ['beds','Beds & Miscellaneous']];
+const CATEGORIES = CAT_DEFS.map(([prefix,label])=>({prefix,label,
+  rooms: ROOMS.map((g,gi)=>[g,gi]).filter(([g])=>g.key===prefix||g.key.startsWith(prefix+'-')).map(([,gi])=>gi)}));
+const N = CATEGORIES.length;
 const ROT_R = 10;                               // rotunda circumradius
 const APO = ROT_R * Math.cos(Math.PI/N);        // apothem 9.51
 const EDGE = 2*ROT_R*Math.sin(Math.PI/N);       // edge len 6.18
@@ -209,7 +222,7 @@ function textPlane(draw, w, h, pw, ph){
 
 /* ================= FLOOR (one slab for all) ================= */
 {
-  const floor = new THREE.Mesh(new THREE.CircleGeometry(60, 72), M.floor);
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(85, 72), M.floor);
   floor.rotation.x = -Math.PI/2; floor.receiveShadow = true;
   scene.add(floor);
 }
@@ -240,8 +253,8 @@ for (let i=0;i<N;i++){
     ctx.strokeStyle='rgba(200,163,106,0.8)'; ctx.lineWidth=4; ctx.strokeRect(10,10,w-20,h-20);
     ctx.fillStyle='#f0e8d6'; ctx.textAlign='center'; ctx.textBaseline='middle';
     let fs=64; ctx.font=fs+'px Georgia';
-    while (ctx.measureText(ROOMS[i].label.toUpperCase()).width > w-90 && fs>30){ fs-=2; ctx.font=fs+'px Georgia'; }
-    ctx.fillText(ROOMS[i].label.toUpperCase(), w/2, h/2+2);
+    while (ctx.measureText(CATEGORIES[i].label.toUpperCase()).width > w-90 && fs>30){ fs-=2; ctx.font=fs+'px Georgia'; }
+    ctx.fillText(CATEGORIES[i].label.toUpperCase(), w/2, h/2+2);
   }, 2.7, 0.5, 1024, 190);
   const sd = APO-0.18;
   sign.position.set(nx*sd, DOOR_H+0.55, nz*sd);
@@ -309,25 +322,38 @@ const TITLE_EDGE = 5;
 const roomZones = [];     // per-room data for locate/lights/textures
 const clickables = [];    // raycast targets (active room only filtered at use)
 
-function makeLabelCard(name, code){
-  return textPlane((ctx,w,h)=>{
-    ctx.fillStyle='#efe7d4'; ctx.fillRect(0,0,w,h);
-    ctx.strokeStyle='rgba(60,48,36,.25)'; ctx.lineWidth=3; ctx.strokeRect(4,4,w-8,h-8);
-    ctx.fillStyle='#241c14'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    let fs=34; ctx.font=fs+'px Georgia';
-    while(ctx.measureText(name).width>w-50 && fs>16){fs-=1;ctx.font=fs+'px Georgia';}
-    ctx.fillText(name, w/2, code? h*0.36 : h*0.5);
-    if(code){ ctx.font='22px Verdana'; ctx.fillStyle='#7c7060';
-      ctx.fillText(code.split('').join(' '), w/2, h*0.72); }
-  }, 0.62, 0.175, 640, 180);
+/* Label cards are drawn lazily, per room, like the photo textures: with ~1,500
+   items, pre-drawing every card would cost hundreds of MB of GPU memory. */
+M.cardBlank = new THREE.MeshBasicMaterial({color:0xefe7d4});
+function drawCardTexture(name, code){
+  const c=document.createElement('canvas'); c.width=640; c.height=180;
+  const ctx=c.getContext('2d'), w=640, h=180;
+  ctx.fillStyle='#efe7d4'; ctx.fillRect(0,0,w,h);
+  ctx.strokeStyle='rgba(60,48,36,.25)'; ctx.lineWidth=3; ctx.strokeRect(4,4,w-8,h-8);
+  ctx.fillStyle='#241c14'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  let fs=34; ctx.font=fs+'px Georgia';
+  while(ctx.measureText(name).width>w-50 && fs>16){fs-=1;ctx.font=fs+'px Georgia';}
+  ctx.fillText(name, w/2, code? h*0.36 : h*0.5);
+  if(code){ ctx.font='22px Verdana'; ctx.fillStyle='#7c7060';
+    ctx.fillText(code.split('').join('\u200A'), w/2, h*0.72); }
+  const tex=new THREE.CanvasTexture(c); tex.colorSpace=THREE.SRGBColorSpace; tex.anisotropy=4;
+  return tex;
 }
 
-function buildRoom(i){
-  const data = ROOMS[i];
-  const an = edgeAngle(i);
+/* Build one exhibition room. F is the room's frame:
+   ox,oz  centre of the hall it radiates from (main rotunda or an ante-hall)
+   an     outward angle of its door edge
+   near   distance from that centre to the room's near wall
+   splay  how fast the room widens with depth (tangent of half-angle)
+   maxL   longest allowed room */
+const zoneOfGallery = {};
+function buildRoomG(gi, F){
+  const data = ROOMS[gi];
+  const an = F.an;
   const [nx,nz] = dirOf(an);             // outward
   const px = Math.cos(an), pz = -Math.sin(an);   // lateral
-  const W2L = (lx,lz)=>[ nx*(ROOM_NEAR+lz)+px*lx, nz*(ROOM_NEAR+lz)+pz*lx ];
+  const W2L = (lx,lz)=>[ F.ox + nx*(F.near+lz)+px*lx, F.oz + nz*(F.near+lz)+pz*lx ];
+  const halfW = z => F.splay*(F.near+z) - 0.55;
 
   /* --- choose length for capacity --- */
   const n = data.items.length;
@@ -340,7 +366,7 @@ function buildRoom(i){
     const panel = (L-10)/2 - 1.0;
     return 2*cnt(sw) + cnt(far) + 2*cnt(flank) + 4*cnt(panel);
   };
-  while (cap(L) < n && L < 40) L += 0.5;
+  while (cap(L) < n && L < F.maxL) L += 0.5;
 
   const g = new THREE.Group(); scene.add(g);
   const lights = new THREE.Group(); lights.visible = false; g.add(lights);
@@ -457,6 +483,7 @@ function buildRoom(i){
   /* ---------- place items into slots ---------- */
   const items=[];
   const nItems=Math.min(data.items.length, slots.length);
+  if(slots.length<data.items.length) console.warn('SLOT SHORTAGE',data.key,slots.length,'<',data.items.length);
   for(let k=0;k<nItems;k++){
     const it=data.items[k], sl=slots[k];
     // default placeholder size (rebuilt on texture load)
@@ -476,13 +503,13 @@ function buildRoom(i){
       new THREE.MeshStandardMaterial({color:0x3a3128,roughness:.92}));
     plane.position.z=0.085; holder.add(plane);
     // label card
-    const card=makeLabelCard(it.name,it.code);
+    const card=new THREE.Mesh(new THREE.PlaneGeometry(0.62,0.175), M.cardBlank);
     card.position.set(0,-0.96,0.07); holder.add(card);
     // clickable proxy
     plane.userData={name:it.name,code:it.code,img:it.img,catLabel:data.label};
     clickables.push(plane);
     g.add(holder);
-    items.push({holder,plane,back,it});
+    items.push({holder,plane,back,card,it});
   }
 
   /* ---------- per-piece spotlights + track ---------- */
@@ -519,9 +546,136 @@ function buildRoom(i){
 
   g.add(lights);
   scene.add(g);
-  roomZones.push({i,an,nx,nz,px,pz,L,group:g,lights,items,loaded:false});
+  zoneOfGallery[gi]=roomZones.length;
+  roomZones.push({gi,data,F,an,nx,nz,px,pz,L,group:g,lights,items,loaded:false});
 }
-for(let i=0;i<N;i++) buildRoom(i);
+/* ================= layout orchestration =================
+   Single-room categories open straight off the rotunda, exactly as before.
+   Multi-room categories (cupboards, wardrobes, chests) lead through a short
+   passage to an ante-hall with their numbered rooms arranged around it. Each
+   ante-hall lives on its own distant "island" so the complexes can never
+   collide; the passage doorway quietly steps you across with a soft blink. */
+const ISLAND_R = 560;
+const HUB_H = 5.6;
+const portals = [];   // {ox,oz,nx,nz,px,pz,s, exx,exz}
+const hubZones = [];  // {label,cx,cz,apo}
+
+function buildPassage(ox,oz,an,s0){
+  const [nx,nz]=dirOf(an); const px=Math.cos(an), pz=-Math.sin(an);
+  const P=(lx,sr)=>[ox+nx*sr+px*lx, oz+nz*sr+pz*lx];
+  const g=new THREE.Group(); scene.add(g);
+  const a1=P(-DOOR_W/2,s0), b1=P(-DOOR_W/2,s0+COR_L+0.45);
+  const a2=P( DOOR_W/2,s0), b2=P( DOOR_W/2,s0+COR_L+0.45);
+  wallBox(g, a1[0],a1[1], b1[0],b1[1], COR_H, 0, 0.24);
+  wallBox(g, a2[0],a2[1], b2[0],b2[1], COR_H, 0, 0.24);
+  const cc=new THREE.Mesh(new THREE.BoxGeometry(DOOR_W+0.5,0.18,COR_L+0.9),M.ceil);
+  const cm=P(0,s0+(COR_L+0.45)/2);
+  cc.position.set(cm[0],COR_H+0.09,cm[1]); cc.rotation.y=an; g.add(cc);
+  const lamp=new THREE.PointLight(0xffe9c8,10,6,2);
+  lamp.position.set(cm[0],COR_H-0.25,cm[1]); g.add(lamp);
+  // dark doorway at the far end, framed in gold like a curtained opening
+  const ca=P(-DOOR_W/2,s0+COR_L+0.45), cb=P(DOOR_W/2,s0+COR_L+0.45);
+  wallBox(g, ca[0],ca[1], cb[0],cb[1], COR_H, 0, 0.2, M.dark);
+  for(const lx of [-DOOR_W/2+0.18, DOOR_W/2-0.18]){
+    const fa=P(lx-0.06,s0+COR_L+0.34), fb=P(lx+0.06,s0+COR_L+0.34);
+    wallBox(g, fa[0],fa[1], fb[0],fb[1], COR_H-0.25, 0, 0.1, M.gold, false);
+  }
+}
+function linkPortals(ox1,oz1,an1,s1, ox2,oz2,an2,s2){
+  const mk=(ox,oz,an,sr)=>{const[nx,nz]=dirOf(an);
+    return{ox,oz,nx,nz,px:Math.cos(an),pz:-Math.sin(an),s:sr+0.12};};
+  const A=mk(ox1,oz1,an1,s1), B=mk(ox2,oz2,an2,s2);
+  // frames are opposed (an2 = an1 + PI), so heading is preserved: pure translation
+  portals.push({...A, exx:B.ox+B.nx*(B.s-0.85), exz:B.oz+B.nz*(B.s-0.85)});
+  portals.push({...B, exx:A.ox+A.nx*(A.s-0.85), exz:A.oz+A.nz*(A.s-0.85)});
+}
+let portalCool=0;
+function checkPortals(){
+  const t=performance.now();
+  if(t<portalCool) return;
+  for(const p of portals){
+    const dx=player.x-p.ox, dz=player.z-p.oz;
+    const sr=dx*p.nx+dz*p.nz, lat=dx*p.px+dz*p.pz;
+    if(sr>p.s && sr<p.s+0.9 && Math.abs(lat)<1.4){
+      player.x=p.exx; player.z=p.exz;
+      portalCool=t+900; fadeBlink(); locate(); break;
+    }
+  }
+}
+const fadeEl=document.getElementById('fade');
+function fadeBlink(){ fadeEl.style.opacity=1; setTimeout(()=>fadeEl.style.opacity=0,200); }
+
+function buildHub(cat, i){
+  const an = edgeAngle(i), [nx,nz]=dirOf(an);
+  const K = cat.rooms.length, Nh = K+1;
+  const Rh = K>=7?6.4 : K>=5?5.4 : 5.0;
+  const apoH = Rh*Math.cos(Math.PI/Nh);
+  const cx = nx*ISLAND_R, cz = nz*ISLAND_R;
+  const back = an+Math.PI;                  // entrance edge faces home
+  const eAng = j => back + j*2*Math.PI/Nh;  // outward normal of edge j (0 = entrance)
+  const vAng = j => back + (j-0.5)*2*Math.PI/Nh;
+  const vert = j => [cx+Rh*Math.sin(vAng(j)), cz+Rh*Math.cos(vAng(j))];
+  const g=new THREE.Group(); scene.add(g);
+  // island floor
+  const fl=new THREE.Mesh(new THREE.CircleGeometry(62,64),M.floor);
+  fl.rotation.x=-Math.PI/2; fl.position.set(cx,0.001,cz); fl.receiveShadow=true; g.add(fl);
+  // walls, doors, lintel signs
+  for(let j=0;j<Nh;j++){
+    const [ax,az]=vert(j), [bx,bz]=vert(j+1);
+    const ex=bx-ax, ez=bz-az, len=Math.hypot(ex,ez), ux=ex/len, uz=ez/len;
+    const mid=len/2, gw=DOOR_W/2;
+    wallBox(g, ax,az, ax+ux*(mid-gw),az+uz*(mid-gw), DOOR_H, 0, 0.3);
+    wallBox(g, ax+ux*(mid+gw),az+uz*(mid+gw), bx,bz, DOOR_H, 0, 0.3);
+    wallBox(g, ax,az,bx,bz, HUB_H-DOOR_H, DOOR_H, 0.3, M.wallUp, false);
+    const fa2=[ax+ux*(mid-gw),az+uz*(mid-gw)], fb2=[ax+ux*(mid+gw),az+uz*(mid+gw)];
+    wallBox(g, fa2[0],fa2[1],fb2[0],fb2[1], 0.1, DOOR_H+0.02, 0.34, M.gold, false);
+    const lbl = j===0 ? 'ENTRANCE FOYER' : ROOMS[cat.rooms[j-1]].label.toUpperCase();
+    const aj=eAng(j), [snx,snz]=dirOf(aj);
+    const sign=textPlane((ctx,w,h)=>{
+      ctx.clearRect(0,0,w,h);
+      ctx.fillStyle='rgba(23,18,13,0.92)'; ctx.fillRect(0,0,w,h);
+      ctx.strokeStyle='rgba(200,163,106,0.8)'; ctx.lineWidth=4; ctx.strokeRect(10,10,w-20,h-20);
+      ctx.fillStyle='#f0e8d6'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      let fs=64; ctx.font=fs+'px Georgia';
+      while (ctx.measureText(lbl).width > w-90 && fs>30){ fs-=2; ctx.font=fs+'px Georgia'; }
+      ctx.fillText(lbl, w/2, h/2+2);
+    }, 2.7, 0.5, 1024, 190);
+    sign.position.set(cx+snx*(apoH-0.18), DOOR_H+0.55, cz+snz*(apoH-0.18));
+    sign.rotation.y = aj+Math.PI;
+    g.add(sign);
+  }
+  // ceiling with a small glowing oculus, always-lit hall
+  {
+    const sh=new THREE.Shape();
+    for(let j=0;j<Nh;j++){const[x,z]=vert(j); j?sh.lineTo(x,z):sh.moveTo(x,z);} sh.closePath();
+    const ceil=new THREE.Mesh(new THREE.ShapeGeometry(sh),M.ceil);
+    ceil.rotation.x=Math.PI/2; ceil.position.y=HUB_H; g.add(ceil);
+    const oc=new THREE.Mesh(new THREE.CircleGeometry(1.6,40), new THREE.MeshBasicMaterial({color:0xfff3dc}));
+    oc.rotation.x=Math.PI/2; oc.position.set(cx,HUB_H-0.06,cz); g.add(oc);
+    const ring=new THREE.Mesh(new THREE.TorusGeometry(1.6,0.07,10,48),M.gold);
+    ring.rotation.x=Math.PI/2; ring.position.set(cx,HUB_H-0.10,cz); g.add(ring);
+    const lamp=new THREE.PointLight(0xffe9c8, 55, 0, 2);
+    lamp.position.set(cx, HUB_H-0.5, cz); g.add(lamp);
+  }
+  // numbered rooms around the hall (splay capped so few-door halls don't go absurdly wide)
+  const splayH = Math.min(Math.tan(Math.PI/Nh), 0.42);
+  for(let j=1;j<Nh;j++){
+    buildRoomG(cat.rooms[j-1], {ox:cx,oz:cz,an:eAng(j),near:apoH+COR_L,splay:splayH,maxL:40});
+  }
+  // passages + the quiet step between rotunda and island
+  buildPassage(0,0,an,APO);
+  buildPassage(cx,cz,back,apoH);
+  linkPortals(0,0,an,APO+COR_L, cx,cz,back,apoH+COR_L);
+  hubZones.push({label:cat.label+' Hall', cx,cz, apo:apoH});
+}
+
+CATEGORIES.forEach((cat,i)=>{
+  if(cat.rooms.length===1){
+    buildRoomG(cat.rooms[0], {ox:0,oz:0,an:edgeAngle(i),near:ROOM_NEAR,splay:SPLAY,maxL:80});
+  } else {
+    buildHub(cat,i);
+  }
+});
 
 /* ================= player & controls ================= */
 
@@ -600,6 +754,10 @@ function loadRoom(z){
       itm.back.geometry=new THREE.BoxGeometry(w+0.14,h+0.14,0.05);
       itm.tex=tex;
     });
+    if(itm.card.material===M.cardBlank){
+      itm.cardTex=drawCardTexture(itm.it.name,itm.it.code);
+      itm.card.material=new THREE.MeshBasicMaterial({map:itm.cardTex,transparent:true});
+    }
   }
   while(loadedOrder.length>4){
     const old=loadedOrder.shift();
@@ -609,6 +767,7 @@ function loadRoom(z){
         itm.plane.material.dispose();
         itm.plane.material=new THREE.MeshStandardMaterial({color:0x3a3128,roughness:.92});
       }
+      if(itm.cardTex){ itm.cardTex.dispose(); itm.card.material.dispose(); itm.cardTex=null; itm.card.material=M.cardBlank; }
     }
     old.loaded=false;
   }
@@ -618,20 +777,26 @@ function loadRoom(z){
 const roomNameEl=document.getElementById('roomName');
 let curZone=-2;
 function locate(){
-  const r=Math.hypot(player.x,player.z);
-  let zone=-1;
-  if(r>APO-0.5){
-    let th=Math.atan2(player.x,player.z); if(th<0)th+=Math.PI*2;
-    const i=(Math.round(th/(2*Math.PI/N)-0.5)+N)%N;
+  let zone=-1, name='Entrance Foyer';
+  // rooms first (a room corridor belongs to its room, even inside a hall radius)
+  for(let i=0;i<roomZones.length;i++){
     const z=roomZones[i];
-    const lz=player.x*z.nx+player.z*z.nz-ROOM_NEAR;
-    if(lz>-COR_L-0.5) zone=i;
+    const dx=player.x-z.F.ox, dz=player.z-z.F.oz;
+    const lz=dx*z.nx+dz*z.nz - z.F.near;
+    if(lz<-COR_L-0.5||lz>z.L+0.5) continue;
+    const lx=dx*z.px+dz*z.pz;
+    const hw=z.F.splay*(z.F.near+Math.max(lz,0))-0.55;
+    if(Math.abs(lx)<=hw+0.6){ zone=i; name=z.data.label; break; }
+  }
+  if(zone<0) for(let h=0;h<hubZones.length;h++){
+    const hb=hubZones[h];
+    if(Math.hypot(player.x-hb.cx,player.z-hb.cz)<hb.apo+COR_L+0.6){ zone=1000+h; name=hb.label; break; }
   }
   if(zone!==curZone){
     curZone=zone;
-    roomNameEl.textContent = zone<0?'Entrance Foyer':ROOMS[zone].label;
+    roomNameEl.textContent=name;
     roomZones.forEach((z,i)=>{ z.lights.visible=(i===zone); });
-    if(zone>=0) loadRoom(roomZones[zone]);
+    if(zone>=0&&zone<1000) loadRoom(roomZones[zone]);
   }
 }
 
@@ -692,13 +857,26 @@ addSel('Entrance Foyer',()=>{
   player.x=0;player.z=0;
   const[dx,dz]=dirOf(titleAn); player.yaw=Math.atan2(-dx,-dz); player.pitch=0; locate();
 },'foyer');
-ROOMS.forEach((r,i)=>{
-  addSel(r.label,()=>{
-    const z=roomZones[i];
-    player.x=z.nx*(ROOM_NEAR+1.2); player.z=z.nz*(ROOM_NEAR+1.2);
-    player.yaw=Math.atan2(-z.nx,-z.nz); player.pitch=0;  // face deeper into room
-    locate();
-  });
+function gotoRoom(z){
+  player.x=z.F.ox+z.nx*(z.F.near+1.2); player.z=z.F.oz+z.nz*(z.F.near+1.2);
+  player.yaw=Math.atan2(-z.nx,-z.nz); player.pitch=0;  // face deeper into room
+  locate();
+}
+CATEGORIES.forEach((cat)=>{
+  if(cat.rooms.length===1){
+    addSel(cat.label, ()=>gotoRoom(roomZones[zoneOfGallery[cat.rooms[0]]]));
+  } else {
+    const hb=hubZones.find(h=>h.label===cat.label+' Hall');
+    addSel(cat.label+' Hall', ()=>{
+      const an=Math.atan2(hb.cx,hb.cz);
+      const ex=Math.sin(an+Math.PI), ez=Math.cos(an+Math.PI);
+      player.x=hb.cx+ex*(hb.apo-1.4); player.z=hb.cz+ez*(hb.apo-1.4);
+      player.yaw=Math.atan2(ex,ez); player.pitch=0; locate();
+    });
+    cat.rooms.forEach(gi=>{
+      addSel('\u2002\u2002'+ROOMS[gi].label, ()=>gotoRoom(roomZones[zoneOfGallery[gi]]));
+    });
+  }
 });
 // face INTO the room means looking outward from centre: forward=(nx,nz) => yaw=atan2(-nx,-nz)? 
 // forward=(-sin yaw,-cos yaw)=(nx,nz) => yaw=atan2(-nx,-nz). Correct above.
@@ -725,6 +903,7 @@ function animate(){
       let nz2=player.z+(-c*mz-s*mx)*sp*dt;
       [nx2,nz2]=collide(nx2,nz2);
       player.x=nx2; player.z=nz2;
+      checkPortals();
     }
   }
   camera.position.set(player.x,EYE,player.z);
@@ -733,7 +912,7 @@ function animate(){
   renderer.render(scene,camera);
 }
 locate();
-window.__dbg={scene,camera,renderer,THREE,roomZones,colliders,player,openInspect,clickables};
+window.__dbg={scene,camera,renderer,THREE,roomZones,hubZones,portals,CATEGORIES,zoneOfGallery,colliders,player,openInspect,clickables};
 animate();
 </script>
 </body>
