@@ -686,7 +686,7 @@ function buildHub(cat, i){
   }
   // numbered rooms around the hall (splay capped so few-door halls don't go absurdly wide)
   const splayH = Math.min(Math.tan(Math.PI/Nh), 0.42);
-  for(let j=1;j<Nh;j++){
+  for(let j=1;j<=K;j++){   // j over ROOMS, not walls (small halls have extra blank walls)
     buildRoomG(cat.rooms[j-1], {ox:cx,oz:cz,an:eAng(j),near:apoH+COR_L,splay:splayH,maxL:40,exitLabel:(cat.label+' HALL').toUpperCase()});
   }
   // passages + the quiet step between rotunda and island
