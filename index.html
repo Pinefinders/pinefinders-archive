@@ -30,10 +30,12 @@
   #roomTag.show{opacity:1}
   #roomTag .r1{font-size:11px;letter-spacing:.3em;color:var(--gold);font-family:Verdana,sans-serif;margin-bottom:5px}
   #roomTag .r2{font-size:21px;letter-spacing:.06em;color:var(--cream);text-shadow:0 1px 8px rgba(0,0,0,.7)}
-  #hint{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:20;font-size:12px;
+  #hint{position:fixed;bottom:64px;left:50%;transform:translateX(-50%);z-index:20;font-size:12px;
     color:rgba(243,236,220,.85);letter-spacing:.18em;font-family:Verdana,sans-serif;pointer-events:none;
     background:rgba(13,11,9,.55);padding:8px 16px;border-radius:3px;opacity:0;transition:opacity .4s}
   #hint.show{opacity:1}
+  #keysbar{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:14;font-size:10px;color:rgba(243,236,220,.55);letter-spacing:.22em;font-family:Verdana,sans-serif;pointer-events:none;background:rgba(13,11,9,.45);padding:7px 14px;border-radius:3px;opacity:0;transition:opacity .6s;white-space:nowrap}
+  #keysbar.show{opacity:1}
   #cross{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:15;pointer-events:none;
     width:6px;height:6px;border-radius:50%;background:rgba(243,236,220,.65);box-shadow:0 0 6px rgba(0,0,0,.6);
     transition:transform .15s,background .15s;opacity:0}
@@ -91,6 +93,7 @@
 
 <div id="roomTag"><div class="r1">THE PINEFINDERS ARCHIVE</div><div class="r2" id="roomName">Entrance Foyer</div></div>
 <div id="hint">CLICK TO RESUME EXPLORING</div>
+<div id="keysbar">W A S D &nbsp;MOVE &nbsp;&middot;&nbsp; MOUSE &nbsp;LOOK &nbsp;&middot;&nbsp; CLICK &nbsp;INSPECT &nbsp;&middot;&nbsp; ESC &nbsp;RELEASE</div>
 <div id="cross"></div>
 
 <div id="selWrap">
@@ -537,6 +540,7 @@ addEventListener('keyup',e=>{keys[e.code]=false;});
 
 const entry=document.getElementById('entry');
 const hint=document.getElementById('hint');
+const keysbar=document.getElementById('keysbar');
 const cross=document.getElementById('cross');
 const roomTag=document.getElementById('roomTag');
 const inspect=document.getElementById('inspect');
@@ -548,6 +552,7 @@ document.addEventListener('pointerlockchange',()=>{
   locked = document.pointerLockElement===document.body;
   entry.classList.toggle('hidden', locked||inspecting);
   cross.classList.toggle('on', locked);
+  keysbar.classList.toggle('show', locked);
   if(locked){
     roomTag.classList.add('show');
     if(!everLocked){ everLocked=true; }
