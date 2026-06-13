@@ -334,104 +334,103 @@ const TITLE_EDGE = 5;
   const _nx=Math.sin(_an), _nz=Math.cos(_an);
   const _px=Math.cos(_an), _pz=-Math.sin(_an);
   const _lat=-2.2;
-  /* APO-0.16 puts the group on the interior face of the wall (wall is 0.3 thick, centred at APO) */
+  /* APO-0.16 = interior face of the rotunda wall (wall is 0.3 thick centred at APO) */
   const _wx=_nx*(APO-0.16)+_px*_lat, _wz=_nz*(APO-0.16)+_pz*_lat;
   const WW=1.1, WH=0.85, WY=1.65, DD=1.7;
 
   const wsR=new THREE.Group();
   wsR.position.set(_wx, WY, _wz);
-  wsR.rotation.y=_an+Math.PI;
+  wsR.rotation.y=_an+Math.PI;   // local +Z faces player (inward)
   scene.add(wsR);
 
-  /* Frame — painted off-white so it's visible before you get close */
-  const fM=new THREE.MeshStandardMaterial({color:0xd4c9aa,roughness:0.55,metalness:0.05});
+  /* --- Window frame (MeshStandardMaterial, lit by foyer lights) --- */
+  const fM=new THREE.MeshStandardMaterial({color:0xddd0b0,roughness:0.55,metalness:0.05});
   const FT=0.09;
   for(const yo of [WH/2+FT/2, -(WH/2+FT/2)]){
-    const m=new THREE.Mesh(new THREE.BoxGeometry(WW+FT*2,FT,0.13),fM);
-    m.position.set(0,yo,0); wsR.add(m);
+    const m=new THREE.Mesh(new THREE.BoxGeometry(WW+FT*2,FT,0.14),fM);
+    m.position.set(0,yo,0.04); wsR.add(m);
   }
   for(const xo of [-(WW/2+FT/2), WW/2+FT/2]){
-    const m=new THREE.Mesh(new THREE.BoxGeometry(FT,WH+FT*2,0.13),fM);
-    m.position.set(xo,0,0); wsR.add(m);
+    const m=new THREE.Mesh(new THREE.BoxGeometry(FT,WH+FT*2,0.14),fM);
+    m.position.set(xo,0,0.04); wsR.add(m);
   }
-  const sur=new THREE.Mesh(new THREE.BoxGeometry(WW+0.28,WH+0.28,0.08),
-    new THREE.MeshStandardMaterial({color:0x3a2e1e,roughness:0.97}));
+  /* Dark surround panel */
+  const sur=new THREE.Mesh(new THREE.BoxGeometry(WW+0.3,WH+0.3,0.05),
+    new THREE.MeshBasicMaterial({color:0x1a1208}));
   sur.position.set(0,0,-0.01); wsR.add(sur);
-  /* Always-on dim glow so the window is findable from across the foyer */
-  const dimL=new THREE.PointLight(0xffbb66,1.8,2.8,2);
-  dimL.position.set(0,0,-0.6); wsR.add(dimL);
 
-  /* Glass */
+  /* --- Glass — thin tinted pane --- */
   const gM=new THREE.MeshStandardMaterial({
-    color:0xaaccdd,transparent:true,opacity:0.28,
-    roughness:0.04,metalness:0.35,side:THREE.DoubleSide,envMapIntensity:1.2});
+    color:0x88aacc,transparent:true,opacity:0.18,
+    roughness:0.04,metalness:0.25,side:THREE.DoubleSide});
   wsR.add(new THREE.Mesh(new THREE.PlaneGeometry(WW,WH),gM));
 
-  /* Diorama surfaces */
-  const ds=col=>new THREE.MeshStandardMaterial({color:col,roughness:0.9,side:THREE.DoubleSide});
+  /* --- Diorama interior: MeshBasicMaterial so colours show without any lighting --- */
+  const bm=col=>new THREE.MeshBasicMaterial({color:col,side:THREE.DoubleSide});
   const hw=WW/2, hh=WH/2;
-  const bw=new THREE.Mesh(new THREE.PlaneGeometry(WW,WH),ds(0x4a3826));
-  bw.position.set(0,0,-DD); wsR.add(bw);
+
+  const bwm=new THREE.Mesh(new THREE.PlaneGeometry(WW,WH),bm(0x7a5c36));
+  bwm.position.set(0,0,-DD); wsR.add(bwm);
   for(const s of [-1,1]){
-    const sw=new THREE.Mesh(new THREE.PlaneGeometry(DD,WH),ds(0x3d2a18));
+    const sw=new THREE.Mesh(new THREE.PlaneGeometry(DD,WH),bm(0x6a4c28));
     sw.position.set(s*hw,0,-DD/2); sw.rotation.y=s*Math.PI/2; wsR.add(sw);
   }
-  const cw=new THREE.Mesh(new THREE.PlaneGeometry(WW,DD),ds(0x2c1e10));
-  cw.position.set(0,hh,-DD/2); cw.rotation.x=-Math.PI/2; wsR.add(cw);
-  const fw=new THREE.Mesh(new THREE.PlaneGeometry(WW,DD),ds(0x2e2010));
-  fw.position.set(0,-hh,-DD/2); fw.rotation.x=Math.PI/2; wsR.add(fw);
+  const cwm=new THREE.Mesh(new THREE.PlaneGeometry(WW,DD),bm(0x2e2010));
+  cwm.position.set(0,hh,-DD/2); cwm.rotation.x=-Math.PI/2; wsR.add(cwm);
+  const fwm=new THREE.Mesh(new THREE.PlaneGeometry(WW,DD),bm(0x5a4422));
+  fwm.position.set(0,-hh,-DD/2); fwm.rotation.x=Math.PI/2; wsR.add(fwm);
 
-  /* Workbench */
-  const wbM=new THREE.MeshStandardMaterial({color:0x6b4a1e,roughness:0.7});
-  const bnch=new THREE.Mesh(new THREE.BoxGeometry(0.6,0.09,0.28),wbM);
-  bnch.position.set(0.05,-hh+0.31,-DD*0.6); wsR.add(bnch);
-  for(const[bx,bz] of [[0.25,-0.1],[-0.25,-0.1],[0.25,0.1],[-0.25,0.1]]){
-    const l=new THREE.Mesh(new THREE.BoxGeometry(0.05,0.31,0.05),wbM);
-    l.position.set(0.05+bx,-hh+0.155,-DD*0.6+bz); wsR.add(l);
+  /* --- Workbench (BasicMaterial, always visible) --- */
+  const wbm=new THREE.MeshBasicMaterial({color:0x9a7034});
+  const bnch=new THREE.Mesh(new THREE.BoxGeometry(0.6,0.07,0.25),wbm);
+  bnch.position.set(0.05,-hh+0.30,-DD*0.58); wsR.add(bnch);
+  for(const[bx,bz] of [[0.24,-0.09],[-0.24,-0.09],[0.24,0.09],[-0.24,0.09]]){
+    const leg=new THREE.Mesh(new THREE.BoxGeometry(0.05,0.30,0.05),wbm);
+    leg.position.set(0.05+bx,-hh+0.15,-DD*0.58+bz); wsR.add(leg);
   }
-  const tl=new THREE.Mesh(new THREE.BoxGeometry(0.16,0.04,0.07),
-    new THREE.MeshStandardMaterial({color:0x8a6a30,roughness:0.55,metalness:0.3}));
-  tl.position.set(0.05,-hh+0.36,-DD*0.6); wsR.add(tl);
 
-  /* Craftsman */
-  const skn=new THREE.MeshStandardMaterial({color:0xc68642,roughness:0.85});
-  const clt=new THREE.MeshStandardMaterial({color:0x3d4a5c,roughness:0.9});
-  const apr=new THREE.MeshStandardMaterial({color:0x8b7355,roughness:0.88});
+  /* --- Craftsman figure (BasicMaterial, pre-lit colours) --- */
+  const bSkn=new THREE.MeshBasicMaterial({color:0xd4854a});
+  const bClt=new THREE.MeshBasicMaterial({color:0x4a5c72});
+  const bApr=new THREE.MeshBasicMaterial({color:0xa08460});
+
   const fig=new THREE.Group();
-  fig.position.set(-0.09,-hh+0.4,-DD*0.6+0.22);
-  fig.rotation.y=Math.PI+0.35;
-  const torso=new THREE.Mesh(new THREE.BoxGeometry(0.16,0.21,0.11),clt);
-  torso.position.set(0,0.37,0); fig.add(torso);
-  const apron=new THREE.Mesh(new THREE.BoxGeometry(0.13,0.18,0.02),apr);
-  apron.position.set(0,0.36,0.065); fig.add(apron);
-  const hd=new THREE.Mesh(new THREE.BoxGeometry(0.12,0.12,0.11),skn);
-  hd.position.set(0,0.545,0); fig.add(hd);
-  const rAg=new THREE.Group(); rAg.position.set(-0.105,0.44,0.01); fig.add(rAg);
-  const rA=new THREE.Mesh(new THREE.BoxGeometry(0.062,0.18,0.062),clt);
-  rA.position.set(0,-0.09,0); rAg.add(rA);
-  const rH=new THREE.Mesh(new THREE.BoxGeometry(0.052,0.06,0.052),skn);
-  rH.position.set(0,-0.205,0); rAg.add(rH);
-  const lAg=new THREE.Group(); lAg.position.set(0.105,0.44,0.01); fig.add(lAg);
-  const lA=new THREE.Mesh(new THREE.BoxGeometry(0.062,0.18,0.062),clt);
-  lA.position.set(0,-0.09,0); lAg.add(lA);
-  for(const[lx,col] of [[-0.05,0x3d4a5c],[0.05,0x354258]]){
-    const lg=new THREE.Mesh(new THREE.BoxGeometry(0.072,0.19,0.082),
-      new THREE.MeshStandardMaterial({color:col,roughness:0.9}));
-    lg.position.set(lx,0.115,0); fig.add(lg);
-  }
+  fig.position.set(-0.08,-hh+0.30,-DD*0.55);
+  fig.rotation.y=Math.PI+0.3;
   wsR.add(fig);
 
-  /* Lights */
-  const wsL=new THREE.Group(); wsL.visible=false; wsR.add(wsL);
-  const blb=new THREE.PointLight(0xffcc80,8.5,3.2,2);
-  blb.position.set(0,hh-0.08,-DD*0.4); wsL.add(blb);
-  const blbM=new THREE.Mesh(new THREE.SphereGeometry(0.033,6,4),
-    new THREE.MeshBasicMaterial({color:0xfff8e0}));
-  blbM.position.set(0,hh-0.08,-DD*0.4); wsL.add(blbM);
-  const spl=new THREE.PointLight(0xff9944,1.0,1.8,2);
-  spl.position.set(0,0,0.4); wsL.add(spl);
+  const torso=new THREE.Mesh(new THREE.BoxGeometry(0.16,0.21,0.11),bClt);
+  torso.position.set(0,0.37,0); fig.add(torso);
+  const apron=new THREE.Mesh(new THREE.BoxGeometry(0.13,0.18,0.02),bApr);
+  apron.position.set(0,0.36,0.066); fig.add(apron);
+  const hd=new THREE.Mesh(new THREE.BoxGeometry(0.12,0.12,0.11),bSkn);
+  hd.position.set(0,0.545,0); fig.add(hd);
 
-  /* Label */
+  /* Right arm — animated */
+  const rAg=new THREE.Group(); rAg.position.set(-0.108,0.44,0.01); fig.add(rAg);
+  const rA=new THREE.Mesh(new THREE.BoxGeometry(0.062,0.18,0.062),bClt);
+  rA.position.set(0,-0.09,0); rAg.add(rA);
+  const rH=new THREE.Mesh(new THREE.BoxGeometry(0.052,0.06,0.052),bSkn);
+  rH.position.set(0,-0.205,0); rAg.add(rH);
+
+  /* Left arm */
+  const lAg=new THREE.Group(); lAg.position.set(0.108,0.44,0.01); fig.add(lAg);
+  new THREE.Mesh(new THREE.BoxGeometry(0.062,0.18,0.062),bClt);
+  const lA=new THREE.Mesh(new THREE.BoxGeometry(0.062,0.18,0.062),bClt);
+  lA.position.set(0,-0.09,0); lAg.add(lA);
+
+  /* Legs */
+  for(const[lx,col] of [[-0.05,0x4a5c72],[0.05,0x3d5064]]){
+    const lg=new THREE.Mesh(new THREE.BoxGeometry(0.072,0.19,0.082),
+      new THREE.MeshBasicMaterial({color:col}));
+    lg.position.set(lx,0.115,0); fig.add(lg);
+  }
+
+  /* --- Warm always-on spill light (makes the glass shimmer) --- */
+  const dimL=new THREE.PointLight(0xffaa44,2.5,2.2,2);
+  dimL.position.set(0,0,-0.4); wsR.add(dimL);
+
+  /* --- Label below the window --- */
   const wlbl=textPlane((ctx,w,h)=>{
     ctx.clearRect(0,0,w,h);
     ctx.fillStyle='rgba(23,18,13,0.9)'; ctx.fillRect(0,0,w,h);
@@ -441,10 +440,10 @@ const TITLE_EDGE = 5;
     ctx.font='26px Verdana'; ctx.fillStyle='#9a8f80';
     ctx.fillText('BESPOKE PINE • MADE TO MEASURE',w/2,h*0.76);
   },1.6,0.38,960,228);
-  wlbl.position.set(0,-(WH/2+FT+0.24),0.01);
+  wlbl.position.set(0,-(WH/2+FT+0.24),0.04);
   wsR.add(wlbl);
 
-  window.__ws={wsL,rAg,lAg,t:0,pos:{x:_wx,z:_wz}};
+  window.__ws={rAg,lAg,t:0};
 }
 
 /* ================= ROOMS ================= */
@@ -1123,13 +1122,9 @@ function animate(){
   if(mapOn && !(++__mf%12)) drawMap();
   if(window.__ws){
     const ws=window.__ws;
-    const near=Math.hypot(player.x-ws.pos.x,player.z-ws.pos.z)<3.8;
-    if(ws.wsL.visible!==near) ws.wsL.visible=near;
-    if(near){
-      ws.t+=dt;
-      ws.rAg.rotation.x=Math.sin(ws.t*2.3)*0.44-0.18;
-      ws.lAg.rotation.x=Math.sin(ws.t*2.3+Math.PI)*0.14;
-    }
+    ws.t+=dt;
+    ws.rAg.rotation.x=Math.sin(ws.t*2.3)*0.44-0.18;
+    ws.lAg.rotation.x=Math.sin(ws.t*2.3+Math.PI)*0.14;
   }
   renderer.render(scene,camera);
 }
