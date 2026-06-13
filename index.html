@@ -354,11 +354,6 @@ const TITLE_EDGE = 5;
     const m=new THREE.Mesh(new THREE.BoxGeometry(FT,WH+FT*2,0.14),fM);
     m.position.set(xo,0,0.04); wsR.add(m);
   }
-  /* Dark surround panel */
-  const sur=new THREE.Mesh(new THREE.BoxGeometry(WW+0.3,WH+0.3,0.05),
-    new THREE.MeshBasicMaterial({color:0x1a1208}));
-  sur.position.set(0,0,-0.01); wsR.add(sur);
-
   /* --- Glass — thin tinted pane --- */
   const gM=new THREE.MeshStandardMaterial({
     color:0x88aacc,transparent:true,opacity:0.18,
