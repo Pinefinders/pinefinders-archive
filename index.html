@@ -329,22 +329,24 @@ const TITLE_EDGE = 5;
 }
 
 /* ================= WORKSHOP WINDOW ================= */
+/* The rotunda wall geometry writes to the GPU depth buffer, blocking any 3D
+   objects placed behind it. Fix: replace the diorama with a single canvas-painted
+   2D scene and set depthTest:false so it always renders regardless of the wall. */
 {
   const _an=edgeAngle(5);
   const _nx=Math.sin(_an), _nz=Math.cos(_an);
   const _px=Math.cos(_an), _pz=-Math.sin(_an);
   const _lat=-2.2;
-  /* APO-0.16 = interior face of the rotunda wall (wall is 0.3 thick centred at APO) */
   const _wx=_nx*(APO-0.16)+_px*_lat, _wz=_nz*(APO-0.16)+_pz*_lat;
-  const WW=1.1, WH=0.85, WY=1.65, DD=1.7;
+  const WW=1.1, WH=0.85, WY=1.65;
 
   const wsR=new THREE.Group();
   wsR.position.set(_wx, WY, _wz);
-  wsR.rotation.y=_an+Math.PI;   // local +Z faces player (inward)
+  wsR.rotation.y=_an+Math.PI;
   scene.add(wsR);
 
-  /* --- Window frame (MeshStandardMaterial, lit by foyer lights) --- */
-  const fM=new THREE.MeshStandardMaterial({color:0x8a7450,roughness:0.7,metalness:0.0});
+  /* Window frame — medium pine colour, lit by foyer lights */
+  const fM=new THREE.MeshStandardMaterial({color:0x7a6040,roughness:0.72,metalness:0.0});
   const FT=0.09;
   for(const yo of [WH/2+FT/2, -(WH/2+FT/2)]){
     const m=new THREE.Mesh(new THREE.BoxGeometry(WW+FT*2,FT,0.14),fM);
@@ -354,76 +356,85 @@ const TITLE_EDGE = 5;
     const m=new THREE.Mesh(new THREE.BoxGeometry(FT,WH+FT*2,0.14),fM);
     m.position.set(xo,0,0.04); wsR.add(m);
   }
-  /* --- Glass — plain tinted pane, BasicMaterial so no env-map reflection --- */
-  const gM=new THREE.MeshBasicMaterial({color:0x6699bb,transparent:true,opacity:0.12,side:THREE.DoubleSide});
-  wsR.add(new THREE.Mesh(new THREE.PlaneGeometry(WW,WH),gM));
 
-  /* --- Diorama interior: MeshBasicMaterial so colours show without any lighting --- */
-  const bm=col=>new THREE.MeshBasicMaterial({color:col,side:THREE.DoubleSide});
-  const hw=WW/2, hh=WH/2;
+  /* Painted workshop interior — canvas drawn, placed with depthTest:false
+     so the wall geometry depth buffer cannot hide it.
+     renderOrder:1 puts it after opaque objects, glass at 2 goes over it. */
+  const interior=textPlane((ctx,w,h)=>{
+    /* dark warm background */
+    ctx.fillStyle='#2e1a08'; ctx.fillRect(0,0,w,h);
+    /* back wall planks */
+    ctx.fillStyle='#6a4828'; ctx.fillRect(16,8,w-32,h-24);
+    for(let y=8;y<h-16;y+=32){ ctx.fillStyle='rgba(0,0,0,0.18)'; ctx.fillRect(16,y,w-32,2); }
+    /* ceiling */
+    ctx.fillStyle='#1e1008'; ctx.fillRect(0,0,w,h*0.1);
+    /* floor */
+    ctx.fillStyle='#4a3214'; ctx.fillRect(0,h*0.76,w,h);
+    /* overhead lamp glow */
+    const lg=ctx.createRadialGradient(w*0.48,h*0.04,4,w*0.48,h*0.04,w*0.6);
+    lg.addColorStop(0,'rgba(255,210,120,0.7)'); lg.addColorStop(1,'rgba(255,180,80,0)');
+    ctx.fillStyle=lg; ctx.fillRect(0,0,w,h);
+    ctx.fillStyle='#fff8d0';
+    ctx.beginPath(); ctx.arc(w*0.48,h*0.05,7,0,7); ctx.fill();
+    /* wall shelf */
+    ctx.fillStyle='#7a5828'; ctx.fillRect(w*0.58,h*0.24,w*0.2,h*0.025);
+    /* hanging tools (silhouettes) */
+    ctx.fillStyle='#555'; ctx.fillRect(w*0.62,h*0.12,4,h*0.12);
+    ctx.fillRect(w*0.70,h*0.10,4,h*0.14); ctx.fillRect(w*0.78,h*0.13,4,h*0.11);
+    /* workbench */
+    ctx.fillStyle='#9a7030'; ctx.fillRect(w*0.06,h*0.60,w*0.72,h*0.09);
+    ctx.fillStyle='#7a5420';
+    for(const x of [0.09,0.28,0.47,0.66]) ctx.fillRect(w*x,h*0.69,w*0.04,h*0.22);
+    /* plank being worked */
+    ctx.fillStyle='#c09050'; ctx.fillRect(w*0.12,h*0.54,w*0.42,h*0.06);
+    /* craftsman — head */
+    ctx.fillStyle='#c87840';
+    ctx.beginPath(); ctx.arc(w*0.27,h*0.24,w*0.065,0,7); ctx.fill();
+    /* body */
+    ctx.fillStyle='#3d4a5c'; ctx.fillRect(w*0.17,h*0.32,w*0.19,h*0.28);
+    /* apron */
+    ctx.fillStyle='#8a7050';
+    ctx.beginPath();
+    ctx.moveTo(w*0.19,h*0.35); ctx.lineTo(w*0.34,h*0.35);
+    ctx.lineTo(w*0.32,h*0.60); ctx.lineTo(w*0.21,h*0.60); ctx.closePath(); ctx.fill();
+    /* right arm (working) */
+    ctx.fillStyle='#3d4a5c';
+    ctx.save(); ctx.translate(w*0.17,h*0.41); ctx.rotate(-0.32);
+    ctx.fillRect(0,-w*0.03,w*0.22,w*0.058); ctx.restore();
+    ctx.fillStyle='#c87840';
+    ctx.save(); ctx.translate(w*0.17,h*0.41); ctx.rotate(-0.32);
+    ctx.fillRect(w*0.21,-w*0.025,w*0.048,w*0.048); ctx.restore();
+    /* left arm */
+    ctx.fillStyle='#3d4a5c';
+    ctx.save(); ctx.translate(w*0.36,h*0.39); ctx.rotate(0.18);
+    ctx.fillRect(0,-w*0.028,w*0.13,w*0.055); ctx.restore();
+    /* legs */
+    ctx.fillStyle='#2a3040';
+    ctx.fillRect(w*0.19,h*0.60,w*0.08,h*0.20); ctx.fillRect(w*0.28,h*0.60,w*0.08,h*0.20);
+    /* warm light wash over scene */
+    const wl=ctx.createRadialGradient(w*0.4,h*0.35,0,w*0.4,h*0.35,w*0.52);
+    wl.addColorStop(0,'rgba(255,160,60,0.22)'); wl.addColorStop(1,'rgba(255,160,60,0)');
+    ctx.fillStyle=wl; ctx.fillRect(0,0,w,h);
+    /* vignette */
+    const vg=ctx.createRadialGradient(w/2,h/2,w*0.18,w/2,h/2,w*0.68);
+    vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(0,0,0,0.72)');
+    ctx.fillStyle=vg; ctx.fillRect(0,0,w,h);
+  },WW,WH,512,384);
+  interior.position.set(0,0,-0.04);
+  interior.material.depthTest=false;
+  interior.renderOrder=1;
+  wsR.add(interior);
 
-  const bwm=new THREE.Mesh(new THREE.PlaneGeometry(WW,WH),bm(0x7a5c36));
-  bwm.position.set(0,0,-DD); wsR.add(bwm);
-  for(const s of [-1,1]){
-    const sw=new THREE.Mesh(new THREE.PlaneGeometry(DD,WH),bm(0x6a4c28));
-    sw.position.set(s*hw,0,-DD/2); sw.rotation.y=s*Math.PI/2; wsR.add(sw);
-  }
-  const cwm=new THREE.Mesh(new THREE.PlaneGeometry(WW,DD),bm(0x2e2010));
-  cwm.position.set(0,hh,-DD/2); cwm.rotation.x=-Math.PI/2; wsR.add(cwm);
-  const fwm=new THREE.Mesh(new THREE.PlaneGeometry(WW,DD),bm(0x5a4422));
-  fwm.position.set(0,-hh,-DD/2); fwm.rotation.x=Math.PI/2; wsR.add(fwm);
+  /* Glass tint — renders after interior (renderOrder 2) */
+  const gM=new THREE.MeshBasicMaterial({color:0x6699bb,transparent:true,opacity:0.08,side:THREE.DoubleSide,depthWrite:false});
+  const glass=new THREE.Mesh(new THREE.PlaneGeometry(WW,WH),gM);
+  glass.renderOrder=2; wsR.add(glass);
 
-  /* --- Workbench (BasicMaterial, always visible) --- */
-  const wbm=new THREE.MeshBasicMaterial({color:0x9a7034});
-  const bnch=new THREE.Mesh(new THREE.BoxGeometry(0.6,0.07,0.25),wbm);
-  bnch.position.set(0.05,-hh+0.30,-DD*0.58); wsR.add(bnch);
-  for(const[bx,bz] of [[0.24,-0.09],[-0.24,-0.09],[0.24,0.09],[-0.24,0.09]]){
-    const leg=new THREE.Mesh(new THREE.BoxGeometry(0.05,0.30,0.05),wbm);
-    leg.position.set(0.05+bx,-hh+0.15,-DD*0.58+bz); wsR.add(leg);
-  }
+  /* Warm spill light into the foyer */
+  const dimL=new THREE.PointLight(0xffaa44,2.2,2.4,2);
+  dimL.position.set(0,0,0.2); wsR.add(dimL);
 
-  /* --- Craftsman figure (BasicMaterial, pre-lit colours) --- */
-  const bSkn=new THREE.MeshBasicMaterial({color:0xd4854a});
-  const bClt=new THREE.MeshBasicMaterial({color:0x4a5c72});
-  const bApr=new THREE.MeshBasicMaterial({color:0xa08460});
-
-  const fig=new THREE.Group();
-  fig.position.set(-0.08,-hh+0.30,-DD*0.55);
-  fig.rotation.y=Math.PI+0.3;
-  wsR.add(fig);
-
-  const torso=new THREE.Mesh(new THREE.BoxGeometry(0.16,0.21,0.11),bClt);
-  torso.position.set(0,0.37,0); fig.add(torso);
-  const apron=new THREE.Mesh(new THREE.BoxGeometry(0.13,0.18,0.02),bApr);
-  apron.position.set(0,0.36,0.066); fig.add(apron);
-  const hd=new THREE.Mesh(new THREE.BoxGeometry(0.12,0.12,0.11),bSkn);
-  hd.position.set(0,0.545,0); fig.add(hd);
-
-  /* Right arm — animated */
-  const rAg=new THREE.Group(); rAg.position.set(-0.108,0.44,0.01); fig.add(rAg);
-  const rA=new THREE.Mesh(new THREE.BoxGeometry(0.062,0.18,0.062),bClt);
-  rA.position.set(0,-0.09,0); rAg.add(rA);
-  const rH=new THREE.Mesh(new THREE.BoxGeometry(0.052,0.06,0.052),bSkn);
-  rH.position.set(0,-0.205,0); rAg.add(rH);
-
-  /* Left arm */
-  const lAg=new THREE.Group(); lAg.position.set(0.108,0.44,0.01); fig.add(lAg);
-  new THREE.Mesh(new THREE.BoxGeometry(0.062,0.18,0.062),bClt);
-  const lA=new THREE.Mesh(new THREE.BoxGeometry(0.062,0.18,0.062),bClt);
-  lA.position.set(0,-0.09,0); lAg.add(lA);
-
-  /* Legs */
-  for(const[lx,col] of [[-0.05,0x4a5c72],[0.05,0x3d5064]]){
-    const lg=new THREE.Mesh(new THREE.BoxGeometry(0.072,0.19,0.082),
-      new THREE.MeshBasicMaterial({color:col}));
-    lg.position.set(lx,0.115,0); fig.add(lg);
-  }
-
-  /* --- Warm always-on spill light (makes the glass shimmer) --- */
-  const dimL=new THREE.PointLight(0xffaa44,2.5,2.2,2);
-  dimL.position.set(0,0,-0.4); wsR.add(dimL);
-
-  /* --- Label below the window --- */
+  /* Label */
   const wlbl=textPlane((ctx,w,h)=>{
     ctx.clearRect(0,0,w,h);
     ctx.fillStyle='rgba(23,18,13,0.9)'; ctx.fillRect(0,0,w,h);
@@ -435,8 +446,6 @@ const TITLE_EDGE = 5;
   },1.6,0.38,960,228);
   wlbl.position.set(0,-(WH/2+FT+0.24),0.04);
   wsR.add(wlbl);
-
-  window.__ws={rAg,lAg,t:0};
 }
 
 /* ================= ROOMS ================= */
@@ -1113,12 +1122,6 @@ function animate(){
   camera.rotation.set(player.pitch,player.yaw,0);
   locate(); updateAim();
   if(mapOn && !(++__mf%12)) drawMap();
-  if(window.__ws){
-    const ws=window.__ws;
-    ws.t+=dt;
-    ws.rAg.rotation.x=Math.sin(ws.t*2.3)*0.44-0.18;
-    ws.lAg.rotation.x=Math.sin(ws.t*2.3+Math.PI)*0.14;
-  }
   renderer.render(scene,camera);
 }
 locate();
