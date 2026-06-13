@@ -344,7 +344,7 @@ const TITLE_EDGE = 5;
   scene.add(wsR);
 
   /* --- Window frame (MeshStandardMaterial, lit by foyer lights) --- */
-  const fM=new THREE.MeshStandardMaterial({color:0xddd0b0,roughness:0.55,metalness:0.05});
+  const fM=new THREE.MeshStandardMaterial({color:0x8a7450,roughness:0.7,metalness:0.0});
   const FT=0.09;
   for(const yo of [WH/2+FT/2, -(WH/2+FT/2)]){
     const m=new THREE.Mesh(new THREE.BoxGeometry(WW+FT*2,FT,0.14),fM);
@@ -354,10 +354,8 @@ const TITLE_EDGE = 5;
     const m=new THREE.Mesh(new THREE.BoxGeometry(FT,WH+FT*2,0.14),fM);
     m.position.set(xo,0,0.04); wsR.add(m);
   }
-  /* --- Glass — thin tinted pane --- */
-  const gM=new THREE.MeshStandardMaterial({
-    color:0x88aacc,transparent:true,opacity:0.18,
-    roughness:0.04,metalness:0.25,side:THREE.DoubleSide});
+  /* --- Glass — plain tinted pane, BasicMaterial so no env-map reflection --- */
+  const gM=new THREE.MeshBasicMaterial({color:0x6699bb,transparent:true,opacity:0.12,side:THREE.DoubleSide});
   wsR.add(new THREE.Mesh(new THREE.PlaneGeometry(WW,WH),gM));
 
   /* --- Diorama interior: MeshBasicMaterial so colours show without any lighting --- */
