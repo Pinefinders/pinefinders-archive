@@ -342,8 +342,8 @@ const TITLE_EDGE = 5;
   wsR.rotation.y=_an+Math.PI;
   scene.add(wsR);
 
-  /* Frame */
-  const fM=new THREE.MeshStandardMaterial({color:0x2b2118,roughness:0.45,metalness:0.2});
+  /* Frame — painted off-white so it's visible before you get close */
+  const fM=new THREE.MeshStandardMaterial({color:0xd4c9aa,roughness:0.55,metalness:0.05});
   const FT=0.09;
   for(const yo of [WH/2+FT/2, -(WH/2+FT/2)]){
     const m=new THREE.Mesh(new THREE.BoxGeometry(WW+FT*2,FT,0.13),fM);
@@ -353,13 +353,16 @@ const TITLE_EDGE = 5;
     const m=new THREE.Mesh(new THREE.BoxGeometry(FT,WH+FT*2,0.13),fM);
     m.position.set(xo,0,0); wsR.add(m);
   }
-  const sur=new THREE.Mesh(new THREE.BoxGeometry(WW+0.28,WH+0.28,0.6),
-    new THREE.MeshStandardMaterial({color:0x100c08,roughness:0.97}));
-  sur.position.set(0,0,-0.32); wsR.add(sur);
+  const sur=new THREE.Mesh(new THREE.BoxGeometry(WW+0.28,WH+0.28,0.08),
+    new THREE.MeshStandardMaterial({color:0x3a2e1e,roughness:0.97}));
+  sur.position.set(0,0,-0.01); wsR.add(sur);
+  /* Always-on dim glow so the window is findable from across the foyer */
+  const dimL=new THREE.PointLight(0xffbb66,1.8,2.8,2);
+  dimL.position.set(0,0,-0.6); wsR.add(dimL);
 
   /* Glass */
   const gM=new THREE.MeshStandardMaterial({
-    color:0xaaccdd,transparent:true,opacity:0.14,
+    color:0xaaccdd,transparent:true,opacity:0.28,
     roughness:0.04,metalness:0.35,side:THREE.DoubleSide,envMapIntensity:1.2});
   wsR.add(new THREE.Mesh(new THREE.PlaneGeometry(WW,WH),gM));
 
