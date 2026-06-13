@@ -334,7 +334,8 @@ const TITLE_EDGE = 5;
   const _nx=Math.sin(_an), _nz=Math.cos(_an);
   const _px=Math.cos(_an), _pz=-Math.sin(_an);
   const _lat=-2.2;
-  const _wx=_nx*APO+_px*_lat, _wz=_nz*APO+_pz*_lat;
+  /* APO-0.16 puts the group on the interior face of the wall (wall is 0.3 thick, centred at APO) */
+  const _wx=_nx*(APO-0.16)+_px*_lat, _wz=_nz*(APO-0.16)+_pz*_lat;
   const WW=1.1, WH=0.85, WY=1.65, DD=1.7;
 
   const wsR=new THREE.Group();
