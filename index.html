@@ -274,6 +274,8 @@ function textPlane(draw, w, h, pw, ph){
   scene.add(floor);
 }
 
+const clickables = [];    // raycast targets — declared here so rotunda signs can register
+
 /* ================= ROTUNDA ================= */
 const vert = i => { const a=i*2*Math.PI/N; return [ROT_R*Math.sin(a), ROT_R*Math.cos(a)]; };
 const edgeAngle = i => (i+0.5)*2*Math.PI/N;     // outward normal angle of edge i
@@ -520,7 +522,6 @@ const TITLE_EDGE = 5;
 
 /* ================= ROOMS ================= */
 const roomZones = [];     // per-room data for locate/lights/textures
-const clickables = [];    // raycast targets (active room only filtered at use)
 
 /* Label cards are drawn lazily, per room, like the photo textures: with ~1,500
    items, pre-drawing every card would cost hundreds of MB of GPU memory. */
