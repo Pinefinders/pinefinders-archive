@@ -307,6 +307,32 @@ for (let i=0;i<N;i++){
   sign.position.set(nx*sd, DOOR_H+0.55, nz*sd);
   sign.rotation.y = an+Math.PI;          // face centre
   rotunda.add(sign);
+  // browse plaque — right of doorway on foyer wall, face centre, clickable
+  {
+    const cat=CATEGORIES[i];
+    if(cat&&cat.url){
+      const px=Math.cos(an), pz=-Math.sin(an);  // lateral tangent direction
+      const bsW=1.3, bsH=0.40;
+      const bsX=nx*(APO-0.16)+px*2.2, bsZ=nz*(APO-0.16)+pz*2.2;
+      let bfs=36;
+      const bLab=cat.label.toUpperCase();
+      const bsign=textPlane((ctx,w,h)=>{
+        ctx.fillStyle='#1a1410'; ctx.fillRect(0,0,w,h);
+        ctx.strokeStyle='rgba(140,27,27,.8)'; ctx.lineWidth=3; ctx.strokeRect(8,8,w-16,h-16);
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        bfs=36; ctx.font=`bold ${bfs}px Georgia`;
+        while(ctx.measureText(bLab).width>w-36&&bfs>18){bfs-=2;ctx.font=`bold ${bfs}px Georgia`;}
+        ctx.fillStyle='#8C1B1B'; ctx.fillText(bLab, w/2, h*0.36);
+        ctx.font='22px Verdana'; ctx.fillStyle='#c8a36a';
+        ctx.fillText('View for sale  ›', w/2, h*0.73);
+      }, bsW, bsH, 640, 196);
+      bsign.position.set(bsX, 1.68, bsZ);
+      bsign.rotation.y=an+Math.PI;   // face centre (visible from foyer)
+      bsign.userData={type:'url', url:cat.url};
+      rotunda.add(bsign);
+      clickables.push(bsign);
+    }
+  }
 }
 /* rotunda ceiling + oculus ring */
 {
