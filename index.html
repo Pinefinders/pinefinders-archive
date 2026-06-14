@@ -331,13 +331,14 @@ for (let i=0;i<N;i++){
         ctx.beginPath(); ctx.moveTo(w*0.12,h*0.38); ctx.lineTo(w*0.88,h*0.38); ctx.stroke();
         /* sold notice */
         ctx.font='18px Verdana'; ctx.fillStyle='#9a8f80';
-        ctx.fillText('All items shown are sold archive pieces.', w/2, h*0.53);
+        ctx.fillText('All items in these rooms are pieces', w/2, h*0.50);
+        ctx.fillText('we have sold in the past.', w/2, h*0.65);
         /* live stock link */
         ctx.font='bold italic 20px Georgia'; ctx.fillStyle='#c8a36a';
-        ctx.fillText('Click to browse currently for sale', w/2, h*0.72);
+        ctx.fillText('Click to browse currently for sale', w/2, h*0.79);
         ctx.font='17px Verdana'; ctx.fillStyle='#c8a36a';
-        ctx.fillText('at pinefinders.co.uk  ›', w/2, h*0.87);
-      }, bsW, bsH, 700, 300);
+        ctx.fillText('at pinefinders.co.uk  ›', w/2, h*0.91);
+      }, bsW, bsH, 700, 340);
       bsign.position.set(bsX, 1.75, bsZ);
       bsign.rotation.y=an+Math.PI;
       bsign.userData={type:'url', url:cat.url};
@@ -783,20 +784,17 @@ function buildRoomG(gi, F){
         ctx.strokeStyle='rgba(140,27,27,.75)'; ctx.lineWidth=3; ctx.strokeRect(8,8,cw-16,ch-16);
         ctx.textAlign='center'; ctx.textBaseline='middle';
         /* heading */
-        ctx.font='bold 38px Georgia'; ctx.fillStyle='#f0e8d6';
-        ctx.fillText('ALL ITEMS IN THIS ROOM ARE SOLD', cw/2, ch*0.20);
+        ctx.font='bold 36px Georgia'; ctx.fillStyle='#f0e8d6';
+        ctx.fillText('All items in these rooms are pieces', cw/2, ch*0.18);
+        ctx.fillText('we have sold in the past.', cw/2, ch*0.32);
         /* divider */
         ctx.strokeStyle='rgba(140,27,27,.4)'; ctx.lineWidth=1;
-        ctx.beginPath(); ctx.moveTo(cw*0.1,ch*0.36); ctx.lineTo(cw*0.9,ch*0.36); ctx.stroke();
-        /* explanation */
-        ctx.font='22px Verdana'; ctx.fillStyle='#9a8f80';
-        ctx.fillText('These are archive pieces — part of', cw/2, ch*0.50);
-        ctx.fillText('The Pinefinders Archive.', cw/2, ch*0.63);
+        ctx.beginPath(); ctx.moveTo(cw*0.1,ch*0.44); ctx.lineTo(cw*0.9,ch*0.44); ctx.stroke();
         /* link */
         ctx.font='bold italic 26px Georgia'; ctx.fillStyle='#c8a36a';
-        ctx.fillText('Click here for '+cat.label+' currently for sale', cw/2, ch*0.78);
+        ctx.fillText('Click here for '+cat.label+' currently for sale', cw/2, ch*0.63);
         ctx.font='20px Verdana'; ctx.fillStyle='#c8a36a';
-        ctx.fillText('at pinefinders.co.uk  ›', cw/2, ch*0.91);
+        ctx.fillText('at pinefinders.co.uk  ›', cw/2, ch*0.79);
       }, bsW, bsH, 860, 296);
       bs.position.set(bwx, 1.82, bwz);
       bs.rotation.y=an;
