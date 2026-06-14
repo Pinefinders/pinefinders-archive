@@ -734,6 +734,30 @@ function buildRoomG(gi, F){
     const cp=W2L(0,-COR_L/2); cl.position.set(cp[0],COR_H-0.25,cp[1]); lights.add(cl);
   }
 
+  /* ---------- browse sign — right flank of near wall, faces into room ---------- */
+  {
+    const cat=CATEGORIES.find(c=>data.key===c.prefix||data.key.startsWith(c.prefix+'-'));
+    if(cat&&cat.url){
+      const bsW=1.5, bsH=0.38;
+      const bsX=(DOOR_W/2+halfW(0))/2;       // midpoint of right entrance flank
+      const [bwx,bwz]=W2L(bsX, 0.14);        // 14 cm inside near wall
+      const bs=textPlane((ctx,cw,ch)=>{
+        ctx.fillStyle='#1a1410'; ctx.fillRect(0,0,cw,ch);
+        ctx.strokeStyle='rgba(140,27,27,.8)'; ctx.lineWidth=4; ctx.strokeRect(10,10,cw-20,ch-20);
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.font='bold 40px Georgia'; ctx.fillStyle='#8C1B1B';
+        ctx.fillText(cat.label.toUpperCase(), cw/2, ch*0.37);
+        ctx.font='27px Verdana'; ctx.fillStyle='#c8a36a';
+        ctx.fillText('View currently for sale  ›', cw/2, ch*0.74);
+      }, bsW, bsH, 768, 192);
+      bs.position.set(bwx, 1.78, bwz);
+      bs.rotation.y=an;      // interior face of near wall — visible from inside room
+      bs.userData={type:'url', url:cat.url};
+      g.add(bs);
+      clickables.push(bs);
+    }
+  }
+
   g.add(lights);
   scene.add(g);
   zoneOfGallery[gi]=roomZones.length;
@@ -1068,7 +1092,11 @@ function updateAim(){
 }
 addEventListener('mousedown',e=>{
   if(!locked||e.button!==0||!hot||inspecting) return;
-  openInspect(hot.userData);
+  if(hot.userData.type==='url'){
+    window.open(hot.userData.url,'_blank','noopener,noreferrer');
+  } else {
+    openInspect(hot.userData);
+  }
 });
 
 /* ================= room selector ================= */
