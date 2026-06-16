@@ -401,17 +401,17 @@ function drawPineDoor(ctx, cw, ch, catLabel){
   ctx.strokeStyle='rgba(200,163,106,0.45)'; ctx.lineWidth=1.5;
   ctx.beginPath();ctx.moveTo(dx2,dy2-ds);ctx.lineTo(dx2+ds*0.65,dy2);ctx.lineTo(dx2,dy2+ds);ctx.lineTo(dx2-ds*0.65,dy2);ctx.closePath();ctx.stroke();
 
-  // Brass knob
-  const kx=cw*0.76, ky=ch*0.52, kr=cw*0.04;
+  // Brass knob — drawn on LEFT of canvas so it appears on RIGHT after mirror flip
+  const kx=cw*0.24, ky=ch*0.52, kr=cw*0.04;
   ctx.fillStyle='#5a3c08'; ctx.fillRect(kx-kr*0.5,ky-kr*1.9,kr,kr*3.8);
   const kg=ctx.createRadialGradient(kx-kr*0.28,ky-kr*0.28,kr*0.08,kx,ky,kr*1.1);
   kg.addColorStop(0,'#ffe888');kg.addColorStop(0.55,'#c8a030');kg.addColorStop(1,'#7a5208');
   ctx.fillStyle=kg; ctx.beginPath();ctx.arc(kx,ky,kr,0,Math.PI*2);ctx.fill();
   ctx.strokeStyle='#5a3c08';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(kx,ky,kr,0,Math.PI*2);ctx.stroke();
 
-  // Hinges
+  // Hinges — drawn on RIGHT of canvas so they appear on LEFT (hinge side) after mirror flip
   for(const hy of [ch*0.2,ch*0.8]){
-    const hx=cw*0.1,hw=cw*0.1,hh=ch*0.068;
+    const hx=cw*0.9,hw=cw*0.1,hh=ch*0.068;
     ctx.fillStyle='#a88018'; ctx.fillRect(hx-hw/2,hy-hh/2,hw,hh);
     ctx.strokeStyle='#604808';ctx.lineWidth=1;ctx.strokeRect(hx-hw/2,hy-hh/2,hw,hh);
     ctx.fillStyle='#3a2608';ctx.beginPath();ctx.arc(hx,hy,hw*0.14,0,Math.PI*2);ctx.fill();
@@ -755,7 +755,7 @@ function buildRoomG(gi, F){
     if(doorCat){
       const dW = DOOR_W - 0.12;
       const pivot = new THREE.Group();
-      const [hx,hz] = W2L(-DOOR_W/2+0.06, -COR_L+0.15);
+      const [hx,hz] = W2L(-DOOR_W/2+0.06, -0.1);
       pivot.position.set(hx, 0, hz);
       const baseAng = an;
       pivot.rotation.y = baseAng;
@@ -766,7 +766,7 @@ function buildRoomG(gi, F){
       dm.material.side = THREE.DoubleSide;
       pivot.add(dm);
       scene.add(pivot);
-      const [dcx,dcz] = W2L(0, -COR_L+0.15);
+      const [dcx,dcz] = W2L(0, -0.1);
       doors.push({pivot, baseAng, curAng:0, targetAng:0, cx:dcx, cz:dcz});
     }
   }
@@ -1021,7 +1021,7 @@ function buildPassage(ox,oz,an,s0,withLamp=true,cat=null){
   if(cat){
     const dW=DOOR_W-0.12;
     const pivot=new THREE.Group();
-    const [hx,hz]=P(-DOOR_W/2+0.06, s0+0.15);
+    const [hx,hz]=P(-DOOR_W/2+0.06, s0+COR_L+0.35);
     pivot.position.set(hx,0,hz);
     const baseAng=an;
     pivot.rotation.y=baseAng;
@@ -1031,7 +1031,7 @@ function buildPassage(ox,oz,an,s0,withLamp=true,cat=null){
     dm.material.side=THREE.DoubleSide;
     pivot.add(dm);
     scene.add(pivot);
-    const [dcx,dcz]=P(0, s0+0.15);
+    const [dcx,dcz]=P(0, s0+COR_L+0.35);
     doors.push({pivot, baseAng, curAng:0, targetAng:0, cx:dcx, cz:dcz});
   }
   return lamp;
