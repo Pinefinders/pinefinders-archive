@@ -1021,7 +1021,7 @@ function buildPassage(ox,oz,an,s0,withLamp=true,cat=null){
   if(cat){
     const dW=DOOR_W-0.12;
     const pivot=new THREE.Group();
-    const [hx,hz]=P(-DOOR_W/2+0.06, s0+0.15);
+    const [hx,hz]=P(-DOOR_W/2+0.06, s0+COR_L-0.1);
     pivot.position.set(hx,0,hz);
     const baseAng=an;
     pivot.rotation.y=baseAng;
@@ -1031,7 +1031,7 @@ function buildPassage(ox,oz,an,s0,withLamp=true,cat=null){
     dm.material.side=THREE.DoubleSide;
     pivot.add(dm);
     scene.add(pivot);
-    const [dcx,dcz]=P(0, s0+0.15);
+    const [dcx,dcz]=P(0, s0+COR_L-0.1);
     doors.push({pivot, baseAng, curAng:0, targetAng:0, cx:dcx, cz:dcz});
   }
   return lamp;
