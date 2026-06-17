@@ -1018,18 +1018,20 @@ function buildPassage(ox,oz,an,s0,withLamp=true,cat=null){
     lamp=new THREE.PointLight(0xffe9c8,10,6,2);
     lamp.position.set(cm[0],COR_H-0.25,cm[1]); g.add(lamp);
   }
-  // dark doorway at the far end
-  const ca=P(-DOOR_W/2,s0+COR_L+0.45), cb=P(DOOR_W/2,s0+COR_L+0.45);
-  wallBox(g, ca[0],ca[1], cb[0],cb[1], COR_H, 0, 0.2, M.dark);
-  for(const lx of [-DOOR_W/2+0.18, DOOR_W/2-0.18]){
-    const fa=P(lx-0.06,s0+COR_L+0.34), fb=P(lx+0.06,s0+COR_L+0.34);
-    wallBox(g, fa[0],fa[1], fb[0],fb[1], COR_H-0.25, 0, 0.1, M.gold, false);
+  // dark doorway at the far end — omitted when a pine door is present (portal fires at the door)
+  if(!cat){
+    const ca=P(-DOOR_W/2,s0+COR_L+0.45), cb=P(DOOR_W/2,s0+COR_L+0.45);
+    wallBox(g, ca[0],ca[1], cb[0],cb[1], COR_H, 0, 0.2, M.dark);
+    for(const lx of [-DOOR_W/2+0.18, DOOR_W/2-0.18]){
+      const fa=P(lx-0.06,s0+COR_L+0.34), fb=P(lx+0.06,s0+COR_L+0.34);
+      wallBox(g, fa[0],fa[1], fb[0],fb[1], COR_H-0.25, 0, 0.1, M.gold, false);
+    }
   }
   // pine door at passage entrance (caller's side), swings into passage on approach
   if(cat){
     const dW=DOOR_W-0.12;
     const pivot=new THREE.Group();
-    const [hx,hz]=P(-DOOR_W/2+0.06, s0+0.15);
+    const [hx,hz]=P(-DOOR_W/2+0.06, s0+COR_L-0.1);
     pivot.position.set(hx,0,hz);
     const baseAng=an;
     pivot.rotation.y=baseAng;
@@ -1039,7 +1041,7 @@ function buildPassage(ox,oz,an,s0,withLamp=true,cat=null){
     dm.material.side=THREE.DoubleSide;
     pivot.add(dm);
     scene.add(pivot);
-    const [dcx,dcz]=P(0, s0+0.15);
+    const [dcx,dcz]=P(0, s0+COR_L-0.1);
     doors.push({pivot, baseAng, curAng:0, targetAng:0, cx:dcx, cz:dcz});
   }
   return lamp;
@@ -1131,7 +1133,7 @@ function buildHub(cat, i){
   buildPassage(0,0,an,APO,false,cat);              // foyer side: door shows category
   const pl=buildPassage(cx,cz,back,apoH);          // island side: lamp joins the island group
   if(pl) hl.add(pl);
-  linkPortals(0,0,an,APO+COR_L, cx,cz,back,apoH+COR_L);
+  linkPortals(0,0,an,APO+COR_L+0.1, cx,cz,back,apoH+COR_L);
   hubZones.push({label:cat.label+' Hall', cx,cz, apo:apoH, lights:hl, url:cat.url});
 }
 
