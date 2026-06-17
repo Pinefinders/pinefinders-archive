@@ -1018,9 +1018,11 @@ function buildPassage(ox,oz,an,s0,withLamp=true,cat=null){
     lamp=new THREE.PointLight(0xffe9c8,10,6,2);
     lamp.position.set(cm[0],COR_H-0.25,cm[1]); g.add(lamp);
   }
-  // dark doorway at the far end
-  const ca=P(-DOOR_W/2,s0+COR_L+0.45), cb=P(DOOR_W/2,s0+COR_L+0.45);
-  wallBox(g, ca[0],ca[1], cb[0],cb[1], COR_H, 0, 0.2, M.dark);
+  // dark doorway at the far end — only when there is no pine door (door replaces this)
+  if(!cat){
+    const ca=P(-DOOR_W/2,s0+COR_L+0.45), cb=P(DOOR_W/2,s0+COR_L+0.45);
+    wallBox(g, ca[0],ca[1], cb[0],cb[1], COR_H, 0, 0.2, M.dark);
+  }
   for(const lx of [-DOOR_W/2+0.18, DOOR_W/2-0.18]){
     const fa=P(lx-0.06,s0+COR_L+0.34), fb=P(lx+0.06,s0+COR_L+0.34);
     wallBox(g, fa[0],fa[1], fb[0],fb[1], COR_H-0.25, 0, 0.1, M.gold, false);
