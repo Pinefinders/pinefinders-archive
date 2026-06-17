@@ -767,7 +767,7 @@ function buildRoomG(gi, F){
       pivot.position.set(hx, 0, hz);
       const baseAng = an;
       pivot.rotation.y = baseAng;
-      const dm = textPlane((ctx,w,h)=>drawPineDoor(ctx,w,h,doorCat.label),
+      const dm = textPlane((ctx,w,h)=>drawPineDoor(ctx,w,h,data.label),
         dW, DOOR_H, 480, 570);
       dm.position.set(dW/2, DOOR_H/2, 0.02);
       dm.rotation.y = Math.PI;   // face toward foyer/hub (fix text reversal)
