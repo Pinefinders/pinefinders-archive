@@ -387,27 +387,38 @@ function drawPineDoor(ctx, cw, ch, catLabel){
   ctx.strokeStyle='#c8a36a'; ctx.lineWidth=2; ctx.strokeRect(panX,topY,panW,topH);
   ctx.strokeStyle='rgba(200,163,106,0.35)'; ctx.lineWidth=1; ctx.strokeRect(panX+5,topY+5,panW-10,topH-10);
 
+  // Split label into name + number e.g. "Wardrobes 1" → "WARDROBES" + "1"
+  const numMatch = catLabel.match(/^(.*?)\s*(\d+)$/);
+  const mainLabel = (numMatch ? numMatch[1] : catLabel).toUpperCase();
+  const roomNum   = numMatch ? numMatch[2] : '';
+
   ctx.textAlign='center'; ctx.textBaseline='middle';
-  const label=catLabel.toUpperCase();
   let fs=52; ctx.font=`bold ${fs}px Georgia`;
-  while(ctx.measureText(label).width>panW-20&&fs>24){fs-=2;ctx.font=`bold ${fs}px Georgia`;}
-  ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillText(label,cw/2+2,topY+topH/2+2);
-  ctx.fillStyle='#f0e8d6'; ctx.fillText(label,cw/2,topY+topH/2);
+  while(ctx.measureText(mainLabel).width>panW-20&&fs>24){fs-=2;ctx.font=`bold ${fs}px Georgia`;}
+  ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillText(mainLabel,cw/2+2,topY+topH/2+2);
+  ctx.fillStyle='#f0e8d6'; ctx.fillText(mainLabel,cw/2,topY+topH/2);
 
   // Decorative rule
   const ruleY=topY+topH+Math.floor(ch*0.06);
   ctx.strokeStyle='rgba(200,163,106,0.55)'; ctx.lineWidth=1;
   ctx.beginPath();ctx.moveTo(panX+pad,ruleY);ctx.lineTo(panX+panW-pad,ruleY);ctx.stroke();
 
-  // Bottom panel — plain with diamond motif
+  // Bottom panel — room number if present, else diamond motif
   const botY=topY+topH+20, botH=ch-botY-pad-6;
   ctx.fillStyle='rgba(0,0,0,0.35)'; ctx.fillRect(panX+4,botY+4,panW,botH);
   ctx.fillStyle='#1a0d04'; ctx.fillRect(panX,botY,panW,botH);
   ctx.strokeStyle='#c8a36a'; ctx.lineWidth=2; ctx.strokeRect(panX,botY,panW,botH);
   ctx.strokeStyle='rgba(200,163,106,0.35)'; ctx.lineWidth=1; ctx.strokeRect(panX+5,botY+5,panW-10,botH-10);
-  const dx2=cw/2, dy2=botY+botH/2, ds=Math.min(panW,botH)*0.18;
-  ctx.strokeStyle='rgba(200,163,106,0.45)'; ctx.lineWidth=1.5;
-  ctx.beginPath();ctx.moveTo(dx2,dy2-ds);ctx.lineTo(dx2+ds*0.65,dy2);ctx.lineTo(dx2,dy2+ds);ctx.lineTo(dx2-ds*0.65,dy2);ctx.closePath();ctx.stroke();
+  if(roomNum){
+    const nfs=Math.min(botH*0.7, panW*0.55);
+    ctx.font=`bold ${nfs}px Georgia`;
+    ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillText(roomNum,cw/2+2,botY+botH/2+2);
+    ctx.fillStyle='#c8a36a'; ctx.fillText(roomNum,cw/2,botY+botH/2);
+  } else {
+    const dx2=cw/2, dy2=botY+botH/2, ds=Math.min(panW,botH)*0.18;
+    ctx.strokeStyle='rgba(200,163,106,0.45)'; ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(dx2,dy2-ds);ctx.lineTo(dx2+ds*0.65,dy2);ctx.lineTo(dx2,dy2+ds);ctx.lineTo(dx2-ds*0.65,dy2);ctx.closePath();ctx.stroke();
+  }
 
   // Brass knob — drawn on LEFT of canvas so it appears on RIGHT after mirror flip
   const kx=cw*0.24, ky=ch*0.52, kr=cw*0.04;
