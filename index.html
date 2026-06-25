@@ -72,7 +72,9 @@
   #cross.hot{transform:translate(-50%,-50%) scale(1.9);background:var(--gold)}
 
   /* ---------- room selector ---------- */
-  #selWrap{position:fixed;left:22px;bottom:22px;z-index:45;font-family:Verdana,sans-serif}
+  #selWrap{position:fixed;left:22px;bottom:22px;z-index:45;font-family:Verdana,sans-serif;
+    opacity:0;pointer-events:none;transition:opacity .5s}
+  #selWrap.visible{opacity:1;pointer-events:auto}
   #selBtn{background:rgba(20,16,12,.82);border:1px solid rgba(200,163,106,.5);color:var(--cream);
     font-size:11px;letter-spacing:.22em;padding:10px 16px;cursor:pointer;border-radius:2px;font-family:Verdana,sans-serif}
   #selBtn:hover{border-color:var(--gold)}
@@ -91,7 +93,9 @@
   /* ---------- map ---------- */
   #mapBtn{position:fixed;left:142px;bottom:22px;z-index:45;background:rgba(20,16,12,.82);
     border:1px solid rgba(200,163,106,.5);color:var(--cream);font-size:11px;letter-spacing:.22em;
-    padding:10px 16px;cursor:pointer;border-radius:2px;font-family:Verdana,sans-serif}
+    padding:10px 16px;cursor:pointer;border-radius:2px;font-family:Verdana,sans-serif;
+    opacity:0;pointer-events:none;transition:opacity .5s}
+  #mapBtn.visible{opacity:1;pointer-events:auto}
   #mapBtn:hover{border-color:var(--gold)}
   #mapOv{position:fixed;inset:0;z-index:46;display:none;align-items:center;justify-content:center;
     background:rgba(10,8,6,.8);backdrop-filter:blur(2px)}
@@ -132,8 +136,9 @@
     text-align:center}
   #touchHint.show{opacity:1}
   body.mobile #joyOuter{display:block}
-  body.mobile #selWrap{bottom:160px}
-  body.mobile #mapBtn{bottom:160px}
+  body.mobile #selWrap{bottom:auto;top:16px;left:16px}
+  body.mobile #selList{bottom:auto;top:44px}
+  body.mobile #mapBtn{bottom:auto;top:16px;left:auto;right:16px}
   body.mobile #keysbar{display:none}
   body.mobile #touchHint{display:block}
   body.mobile #entry .keys{display:none}
@@ -141,29 +146,29 @@
 
   /* ---------- mobile help pop-up ---------- */
   #mobileHelp{display:none;position:fixed;inset:0;z-index:60;
-    background:rgba(8,6,4,.92);backdrop-filter:blur(4px);
+    background:radial-gradient(ellipse at 50% 40%, #faf5ec 0%, #ede3d0 60%, #e2d5bc 100%);
     align-items:center;justify-content:center;padding:24px}
   #mobileHelp.show{display:flex}
-  #mobileHelp .hpanel{background:rgba(22,17,12,.97);border:1px solid rgba(200,163,106,.45);
+  #mobileHelp .hpanel{background:rgba(255,251,244,.9);border:1px solid rgba(140,27,27,.25);
     border-radius:6px;padding:32px 28px;max-width:380px;width:100%;text-align:center}
-  #mobileHelp .htitle{font-size:18px;letter-spacing:.22em;color:var(--gold);
+  #mobileHelp .htitle{font-size:18px;letter-spacing:.22em;color:#8C1B1B;
     font-family:Verdana,sans-serif;margin-bottom:6px;text-transform:uppercase}
-  #mobileHelp .hsub{font-size:12px;color:var(--grey);letter-spacing:.12em;
+  #mobileHelp .hsub{font-size:12px;color:#7a6040;letter-spacing:.12em;
     font-family:Verdana,sans-serif;margin-bottom:28px}
   #mobileHelp .hsteps{display:flex;flex-direction:column;gap:18px;margin-bottom:28px;text-align:left}
   #mobileHelp .hstep{display:flex;align-items:center;gap:16px}
   #mobileHelp .hicon{width:52px;height:52px;flex-shrink:0;border-radius:50%;
-    background:rgba(200,163,106,.12);border:1px solid rgba(200,163,106,.35);
+    background:rgba(140,27,27,.08);border:1px solid rgba(140,27,27,.2);
     display:flex;align-items:center;justify-content:center;font-size:24px}
-  #mobileHelp .htext strong{display:block;font-size:13px;color:var(--cream);
+  #mobileHelp .htext strong{display:block;font-size:13px;color:#3a2a18;
     letter-spacing:.06em;margin-bottom:3px;font-family:Georgia,serif}
-  #mobileHelp .htext span{font-size:11.5px;color:var(--grey);letter-spacing:.06em;
+  #mobileHelp .htext span{font-size:11.5px;color:#7a6040;letter-spacing:.06em;
     font-family:Verdana,sans-serif;line-height:1.4}
-  #mobileHelp .hbtn{display:block;width:100%;padding:15px;background:rgba(140,27,27,.85);
-    border:1px solid rgba(140,27,27,.9);border-radius:3px;color:var(--cream);
+  #mobileHelp .hbtn{display:block;width:100%;padding:15px;background:#8C1B1B;
+    border:1px solid #8C1B1B;border-radius:3px;color:#fff;
     font-size:13px;letter-spacing:.22em;font-family:Verdana,sans-serif;cursor:pointer;
     text-transform:uppercase}
-  #mobileHelp .hbtn:active{background:rgba(140,27,27,1)}
+  #mobileHelp .hbtn:active{background:#a02020}
 </style>
 </head>
 <body>
@@ -1278,6 +1283,8 @@ function enterGallery(){
   locked=true; everLocked=true;
   entry.classList.add('hidden');
   cross.classList.add('on');
+  document.getElementById('selWrap').classList.add('visible');
+  document.getElementById('mapBtn').classList.add('visible');
   if(isMobile){
     document.getElementById('mobileHelp').classList.add('show');
   } else {
@@ -1300,6 +1307,8 @@ document.addEventListener('pointerlockchange',()=>{
   cross.classList.toggle('on', locked);
   keysbar.classList.toggle('show', locked);
   if(locked){
+    document.getElementById('selWrap').classList.add('visible');
+    document.getElementById('mapBtn').classList.add('visible');
     roomTag.classList.add('show');
     if(!everLocked){ everLocked=true; }
     else { hint.classList.add('show'); setTimeout(()=>hint.classList.remove('show'),2200); }
